@@ -1,8 +1,27 @@
 {
   "name": "@vanilla-slice/core",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Framework-agnostic ECS world orchestrating physics, slicing, spatial, and geometry — the main entry point to the Vanilla Slice engine.",
+  "keywords": [
+    "vanilla-slice",
+    "ecs",
+    "game-engine",
+    "physics",
+    "slicing",
+    "3d",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "Rohan Fredriksson <rohan.fredriksson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RohanFredriksson/vanilla-slice.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/RohanFredriksson/vanilla-slice/tree/master/packages/core#readme",
+  "bugs": "https://github.com/RohanFredriksson/vanilla-slice/issues",
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -11,15 +30,28 @@
       "default": "./dist/index.js"
     }
   },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@vanilla-slice/physics": "*",
-    "@vanilla-slice/slicing": "*",
-    "@vanilla-slice/spatial": "*",
-    "@vanilla-slice/geometry": "*",
-    "@vanilla-slice/math": "*"
+    "@vanilla-slice/physics": "^0.1.0",
+    "@vanilla-slice/slicing": "^0.1.0",
+    "@vanilla-slice/spatial": "^0.1.0",
+    "@vanilla-slice/geometry": "^0.1.0",
+    "@vanilla-slice/math": "^0.1.0"
   },
   "nx": {
-    "tags": ["scope:core", "layer:core"],
+    "tags": [
+      "scope:core",
+      "layer:core"
+    ],
     "targets": {
       "build": {},
       "lint": {},

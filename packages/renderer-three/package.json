@@ -1,8 +1,26 @@
 {
   "name": "@vanilla-slice/renderer-three",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Three.js rendering adapter for the Vanilla Slice engine — maps engine state to meshes and provides raycasting.",
+  "keywords": [
+    "vanilla-slice",
+    "three",
+    "threejs",
+    "renderer",
+    "3d",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "Rohan Fredriksson <rohan.fredriksson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RohanFredriksson/vanilla-slice.git",
+    "directory": "packages/renderer-three"
+  },
+  "homepage": "https://github.com/RohanFredriksson/vanilla-slice/tree/master/packages/renderer-three#readme",
+  "bugs": "https://github.com/RohanFredriksson/vanilla-slice/issues",
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -11,16 +29,32 @@
       "default": "./dist/index.js"
     }
   },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@vanilla-slice/core": "*",
-    "@vanilla-slice/math": "*",
-    "three": "^0.169.0"
+    "@vanilla-slice/core": "^0.1.0",
+    "@vanilla-slice/math": "^0.1.0"
+  },
+  "peerDependencies": {
+    "three": ">=0.160.0"
   },
   "devDependencies": {
+    "three": "^0.169.0",
     "@types/three": "^0.169.0"
   },
   "nx": {
-    "tags": ["scope:renderer", "layer:adapter"],
+    "tags": [
+      "scope:renderer",
+      "layer:adapter"
+    ],
     "targets": {
       "build": {},
       "lint": {},

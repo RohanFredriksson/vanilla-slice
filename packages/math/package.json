@@ -1,8 +1,27 @@
 {
   "name": "@vanilla-slice/math",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Zero-dependency 3D math primitives (vectors, matrices, quaternions) for the Vanilla Slice engine.",
+  "keywords": [
+    "vanilla-slice",
+    "3d",
+    "math",
+    "vector",
+    "matrix",
+    "quaternion",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "Rohan Fredriksson <rohan.fredriksson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RohanFredriksson/vanilla-slice.git",
+    "directory": "packages/math"
+  },
+  "homepage": "https://github.com/RohanFredriksson/vanilla-slice/tree/master/packages/math#readme",
+  "bugs": "https://github.com/RohanFredriksson/vanilla-slice/issues",
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -11,8 +30,21 @@
       "default": "./dist/index.js"
     }
   },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "nx": {
-    "tags": ["scope:math", "layer:core"],
+    "tags": [
+      "scope:math",
+      "layer:core"
+    ],
     "targets": {
       "build": {},
       "lint": {},

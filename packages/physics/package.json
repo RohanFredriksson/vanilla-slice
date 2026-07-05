@@ -1,8 +1,27 @@
 {
   "name": "@vanilla-slice/physics",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Headless rigid-body physics: fixed-timestep integration, GJK/EPA collisions, and impulse solving for the Vanilla Slice engine.",
+  "keywords": [
+    "vanilla-slice",
+    "physics",
+    "rigid-body",
+    "collision",
+    "gjk",
+    "epa",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "Rohan Fredriksson <rohan.fredriksson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RohanFredriksson/vanilla-slice.git",
+    "directory": "packages/physics"
+  },
+  "homepage": "https://github.com/RohanFredriksson/vanilla-slice/tree/master/packages/physics#readme",
+  "bugs": "https://github.com/RohanFredriksson/vanilla-slice/issues",
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -11,11 +30,24 @@
       "default": "./dist/index.js"
     }
   },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@vanilla-slice/math": "*"
+    "@vanilla-slice/math": "^0.1.0"
   },
   "nx": {
-    "tags": ["scope:physics", "layer:core"],
+    "tags": [
+      "scope:physics",
+      "layer:core"
+    ],
     "targets": {
       "build": {},
       "lint": {},
