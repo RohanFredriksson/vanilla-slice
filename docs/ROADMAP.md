@@ -35,7 +35,7 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 - [ ] Headless tests for all of the above.
 
 ## Phase 4 — Slicing
-- [ ] `slicing`: bounded slice volume, candidate filtering, fragment generation,
+- [x] `slicing`: bounded slice volume, candidate filtering, fragment generation,
       impulse application.
 - [ ] End-to-end headless slice test (gesture → fragments).
 
