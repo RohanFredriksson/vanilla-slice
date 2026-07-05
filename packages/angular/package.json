@@ -1,0 +1,27 @@
+{
+  "name": "@slice/angular",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@slice/core": "*",
+    "@slice/renderer-three": "*",
+    "@slice/math": "*"
+  },
+  "nx": {
+    "tags": ["scope:angular", "layer:framework"],
+    "targets": {
+      "build": {},
+      "lint": {},
+      "test": {}
+    }
+  }
+}

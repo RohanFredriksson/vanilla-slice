@@ -1,0 +1,29 @@
+{
+  "name": "@slice/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@slice/physics": "*",
+    "@slice/slicing": "*",
+    "@slice/spatial": "*",
+    "@slice/geometry": "*",
+    "@slice/math": "*"
+  },
+  "nx": {
+    "tags": ["scope:core", "layer:core"],
+    "targets": {
+      "build": {},
+      "lint": {},
+      "test": {}
+    }
+  }
+}

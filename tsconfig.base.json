@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": [],
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "baseUrl": ".",
+    "paths": {
+      "@slice/math": ["packages/math/src/index.ts"],
+      "@slice/geometry": ["packages/geometry/src/index.ts"],
+      "@slice/physics": ["packages/physics/src/index.ts"],
+      "@slice/spatial": ["packages/spatial/src/index.ts"],
+      "@slice/slicing": ["packages/slicing/src/index.ts"],
+      "@slice/core": ["packages/core/src/index.ts"],
+      "@slice/renderer-three": ["packages/renderer-three/src/index.ts"],
+      "@slice/angular": ["packages/angular/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}

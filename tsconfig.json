@@ -1,0 +1,15 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/math" },
+    { "path": "packages/geometry" },
+    { "path": "packages/physics" },
+    { "path": "packages/spatial" },
+    { "path": "packages/slicing" },
+    { "path": "packages/core" },
+    { "path": "packages/renderer-three" },
+    { "path": "packages/angular" },
+    { "path": "apps/portfolio" },
+    { "path": "apps/fruit-demo" }
+  ]
+}

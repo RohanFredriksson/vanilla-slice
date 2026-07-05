@@ -1,0 +1,25 @@
+{
+  "name": "@slice/geometry",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@slice/math": "*"
+  },
+  "nx": {
+    "tags": ["scope:geometry", "layer:core"],
+    "targets": {
+      "build": {},
+      "lint": {},
+      "test": {}
+    }
+  }
+}

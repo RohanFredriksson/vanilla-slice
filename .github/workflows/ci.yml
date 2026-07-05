@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Establish the base/head SHAs for `nx affected` on pull requests.
+      - uses: nrwl/nx-set-shas@v4
+
+      - name: Lint (module boundaries + code)
+        run: npx nx affected -t lint --base=$NX_BASE --head=$NX_HEAD
+
+      - name: Build
+        run: npx nx affected -t build --base=$NX_BASE --head=$NX_HEAD
+
+      - name: Test
+        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD

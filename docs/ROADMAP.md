@@ -19,12 +19,12 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 - [ ] Stakeholder review and sign-off.
 
 ## Phase 2 — Workspace Setup (Nx)
-- [ ] Create Nx monorepo.
-- [ ] Scaffold empty packages: `math`, `geometry`, `physics`, `slicing`,
+- [x] Create Nx monorepo.
+- [x] Scaffold empty packages: `math`, `geometry`, `physics`, `slicing`,
       `spatial`, `core`, `renderer-three`, `angular`.
-- [ ] Scaffold apps: `portfolio`, `fruit-demo`.
-- [ ] Configure dependency-boundary lint rules (enforce one-way layering).
-- [ ] Configure build caching, testing, and CI.
+- [x] Scaffold apps: `portfolio`, `fruit-demo`.
+- [x] Configure dependency-boundary lint rules (enforce one-way layering).
+- [x] Configure build caching, testing, and CI.
 
 ## Phase 3 — Core Engine (framework-free)
 - [ ] `math`: vectors, matrices, quaternions.

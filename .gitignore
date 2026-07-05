@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Nx
+.nx/cache
+.nx/workspace-data
+
+# Test / coverage
+coverage/
+
+# Editor / OS
+.DS_Store
+*.log

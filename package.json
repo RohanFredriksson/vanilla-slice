@@ -1,0 +1,31 @@
+{
+  "name": "slice-engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Slice Engine — framework-agnostic, renderer-agnostic TypeScript engine for physics, mesh slicing, geometry, and spatial queries.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "nx run-many -t build",
+    "test": "nx run-many -t test",
+    "lint": "nx run-many -t lint",
+    "graph": "nx graph",
+    "affected:build": "nx affected -t build",
+    "affected:test": "nx affected -t test",
+    "affected:lint": "nx affected -t lint"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@nx/eslint-plugin": "latest",
+    "eslint": "^9.0.0",
+    "jsonc-eslint-parser": "^2.4.0",
+    "nx": "latest",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  }
+}
