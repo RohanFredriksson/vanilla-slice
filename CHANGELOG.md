@@ -1,3 +1,13 @@
+## 0.1.3 (2026-07-05)
+
+### 🩹 Fixes
+
+- **math:** add missing JSDoc ([f83ecfa](https://github.com/RohanFredriksson/vanilla-slice/commit/f83ecfa))
+
+### ❤️ Thank You
+
+- Rohan Fredriksson
+
 ## 0.1.2 (2026-07-05)
 
 ### 🚀 Features
