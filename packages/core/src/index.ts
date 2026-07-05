@@ -9,4 +9,24 @@ export * from './systems';
 export * from './slice-system';
 export * from './world';
 
+// Facade: re-export the curated public API of the underlying engine packages so
+// adapters and apps depend on @slice/core alone (respecting the layering rules).
+export type { Mesh, Plane } from '@slice/geometry';
+export {
+  createBox,
+  createPlane,
+  fromNormalAndPoint,
+  fromCoplanarPoints,
+  computeVolume,
+  computeBounds,
+} from '@slice/geometry';
+export type { SliceVolume, Fragment, Ray } from '@slice/slicing';
+export {
+  createSliceVolume,
+  sliceVolumeFromSwipe,
+  screenToNdc,
+  rayFromNdc,
+  rayFromScreen,
+} from '@slice/slicing';
+
 export const CORE_PACKAGE = '@slice/core';

@@ -40,8 +40,8 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 - [x] End-to-end headless slice test (gesture → fragments).
 
 ## Phase 5 — Rendering Adapter
-- [ ] `renderer-three`: engine state → meshes, transform sync, camera, raycasting.
-- [ ] Verify renderer owns no simulation state.
+- [x] `renderer-three`: engine state → meshes, transform sync, camera, raycasting.
+- [x] Verify renderer owns no simulation state.
 
 ## Phase 6 — Framework Integration & Demo
 - [ ] `angular`: canvas hosting, lifecycle integration, UI components.

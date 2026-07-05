@@ -13,7 +13,11 @@
   },
   "dependencies": {
     "@slice/core": "*",
-    "@slice/math": "*"
+    "@slice/math": "*",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.169.0"
   },
   "nx": {
     "tags": ["scope:renderer", "layer:adapter"],

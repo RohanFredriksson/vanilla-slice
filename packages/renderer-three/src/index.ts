@@ -1,6 +1,8 @@
-// @slice/renderer-three — placeholder module.
-// Rendering ADAPTER. Implementation (engine state -> Three.js meshes, transform
-// sync, camera, raycasting) begins in a later roadmap phase. Three.js is added
-// as a dependency then. This adapter reads engine state and never owns
-// simulation state. Depends on @slice/core and @slice/math.
+// @slice/renderer-three — rendering ADAPTER mapping engine state to Three.js.
+// Depends on @slice/core, @slice/math, and three. Reads engine state only; it
+// never owns or mutates simulation state (ARCHITECTURE.md, ADR 0002).
+
+export * from './three-utils';
+export * from './three-renderer';
+
 export const RENDERER_THREE_PACKAGE = '@slice/renderer-three';
