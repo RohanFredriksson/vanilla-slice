@@ -1,4 +1,4 @@
-# Slice Engine — Roadmap (ROADMAP.md)
+# Vanilla Slice — Roadmap (ROADMAP.md)
 
 Status: Draft · Phase: Pre-implementation
 
@@ -69,6 +69,20 @@ Run the demos in a browser (Vite dev server; engine packages resolve to source):
 - [x] Verify build + lint + test; confirm the Angular XSS advisory is gone.
 
 ## Phase 7 — Hardening & Publishing
+- [ ] Rigid-body collisions on generalised meshes (ADR 0007, on by default):
+  - [x] Add inverse inertia tensor (`invInertia`) to `RigidBody`; wire into
+        integration.
+  - [x] Convex hull generation in `geometry`; compute hulls for slice fragments.
+  - [x] GJK + EPA narrow-phase for convex pairs in `physics`; keep the
+        `sphereSphereContact` fast path.
+  - [x] Contact manifold via face clipping (stable resting contact).
+  - [x] `resolveContact` (normal impulse + Coulomb friction + positional
+        correction), respecting `invMass`/`invInertia` (static = 0).
+  - [x] `resolveCollisions(world)` system wired into `stepPhysics`, on by default
+        with a per-world / per-body opt-out (`collides`).
+  - [ ] Optional approximate convex decomposition for concave meshes.
+  - [ ] Verify `spinning-slices` (objects no longer phase through); profile and
+        tune against the "hundreds of objects" goal.
 - [ ] Performance passes (allocation profiling, spatial tuning).
 - [ ] API stabilization and versioning.
 - [ ] npm publishing pipeline for packages.

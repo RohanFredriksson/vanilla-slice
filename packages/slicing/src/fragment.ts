@@ -1,6 +1,12 @@
 import { Vec3 } from '@vanilla-slice/math';
-import { splitMeshByPlane, vertexCount, getVertex } from '@vanilla-slice/geometry';
-import type { Mesh } from '@vanilla-slice/geometry';
+import {
+  splitMeshByPlane,
+  vertexCount,
+  getVertex,
+  computeConvexHull,
+  translateHull,
+} from '@vanilla-slice/geometry';
+import type { Mesh, ConvexHull } from '@vanilla-slice/geometry';
 import type { SliceVolume } from './slice-volume';
 
 type Vec3T = ReturnType<typeof Vec3.create>;
@@ -16,6 +22,12 @@ export interface Fragment {
   side: 1 | -1;
   impulse: Vec3T;
   centroid: Vec3T;
+  /**
+   * Convex hull of the piece in centroid-local space (i.e. relative to
+   * `centroid`), ready to serve as the collider for the body spawned at
+   * `centroid` with identity orientation.
+   */
+  hull: ConvexHull;
 }
 
 /** Options for {@link sliceMesh}. */
@@ -66,6 +78,7 @@ export function sliceMesh(
   const fragments: Fragment[] = [];
 
   if (front) {
+    const centroid = computeCentroid(front);
     fragments.push({
       mesh: front,
       side: 1,
@@ -74,10 +87,12 @@ export function sliceMesh(
         normal[1] * separationSpeed,
         normal[2] * separationSpeed,
       ],
-      centroid: computeCentroid(front),
+      centroid,
+      hull: localHull(front, centroid),
     });
   }
   if (back) {
+    const centroid = computeCentroid(back);
     fragments.push({
       mesh: back,
       side: -1,
@@ -86,8 +101,15 @@ export function sliceMesh(
         -normal[1] * separationSpeed,
         -normal[2] * separationSpeed,
       ],
-      centroid: computeCentroid(back),
+      centroid,
+      hull: localHull(back, centroid),
     });
   }
   return fragments;
+}
+
+/** Convex hull of `mesh` expressed relative to `centroid` (centroid-local space). */
+function localHull(mesh: Mesh, centroid: Vec3T): ConvexHull {
+  const hull = computeConvexHull(mesh);
+  return translateHull(hull, [-centroid[0], -centroid[1], -centroid[2]]);
 }

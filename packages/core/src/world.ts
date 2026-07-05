@@ -1,5 +1,5 @@
 import { createBody } from '@vanilla-slice/physics';
-import type { RigidBody, Aabb } from '@vanilla-slice/physics';
+import type { RigidBody, Aabb, ConvexShape } from '@vanilla-slice/physics';
 import {
   createSpatialHash,
   insert,
@@ -12,6 +12,7 @@ import {
   alpha as stepperAlpha,
 } from '@vanilla-slice/physics';
 import type { FixedStepper } from '@vanilla-slice/physics';
+import { computeConvexHull } from '@vanilla-slice/geometry';
 import type { SliceVolume } from '@vanilla-slice/slicing';
 import {
   stepPhysics,
@@ -48,6 +49,9 @@ function resolveConfig(config: WorldConfig): ResolvedConfig {
     bounds: config.bounds ?? DEFAULT_BOUNDS,
     ground: config.ground,
     sliceSeparationSpeed: config.sliceSeparationSpeed ?? 2,
+    collisions: config.collisions ?? true,
+    restitution: config.restitution ?? 0,
+    friction: config.friction ?? 0.5,
   };
 }
 
@@ -62,6 +66,8 @@ export class World implements SimWorld {
   readonly sliceables = new Map<EntityId, Sliceable>();
   readonly renderables = new Map<EntityId, Renderable>();
   readonly metadata = new Map<EntityId, Metadata>();
+  readonly colliders = new Map<EntityId, ConvexShape>();
+  readonly nonCollidable = new Set<EntityId>();
   readonly spatial: SpatialHash;
 
   private readonly stepper: FixedStepper;
@@ -102,6 +108,16 @@ export class World implements SimWorld {
     if (options.meshRef !== undefined) {
       this.renderables.set(id, { meshRef: options.meshRef, visible: true });
     }
+    // Collider: explicit override, else the convex hull of the geometry.
+    const collider =
+      options.collider ??
+      (options.geometry ? computeConvexHull(options.geometry) : undefined);
+    if (collider) {
+      this.colliders.set(id, collider);
+    }
+    if (options.collides === false) {
+      this.nonCollidable.add(id);
+    }
     this.metadata.set(id, {
       tags: new Set(options.tags ?? []),
       ...(options.name !== undefined ? { name: options.name } : {}),
@@ -120,6 +136,8 @@ export class World implements SimWorld {
     this.sliceables.delete(id);
     this.renderables.delete(id);
     this.metadata.delete(id);
+    this.colliders.delete(id);
+    this.nonCollidable.delete(id);
     spatialRemove(this.spatial, id);
     return true;
   }

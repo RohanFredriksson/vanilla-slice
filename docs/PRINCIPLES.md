@@ -1,4 +1,4 @@
-# Slice Engine — Principles (PRINCIPLES.md)
+# Vanilla Slice — Principles (PRINCIPLES.md)
 
 These principles guide every design and implementation decision. When in doubt,
 optimize for reuse, boundaries, and clarity over convenience.

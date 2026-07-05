@@ -1,5 +1,5 @@
 /**
- * Shared numeric vector/matrix types for the Slice Engine math package.
+ * Shared numeric vector/matrix types for the Vanilla Slice math package.
  *
  * All types are fixed-length tuples so that indexed access is statically known
  * (avoids `number | undefined` under `noUncheckedIndexedAccess`). Mutable

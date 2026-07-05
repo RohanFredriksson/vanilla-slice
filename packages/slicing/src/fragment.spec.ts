@@ -57,4 +57,29 @@ describe('sliceMesh', () => {
     const box = createBox(2, 2, 2);
     expect(computeCentroid(box)).toEqual([0, 0, 0]);
   });
+
+  it('attaches a centroid-local convex hull to each fragment', () => {
+    const box = createBox(2, 2, 2);
+    const plane = fromNormalAndPoint(createPlane(), [1, 0, 0], [0, 0, 0]);
+    const volume = createSliceVolume(plane, [0, 0, 0], 3);
+
+    const fragments = sliceMesh(box, volume);
+    for (const fragment of fragments) {
+      expect(fragment.hull.faces.length).toBeGreaterThan(0);
+      // Hull is centroid-local: its own centroid sits near the origin.
+      const { vertices } = fragment.hull;
+      let cx = 0;
+      let cy = 0;
+      let cz = 0;
+      const n = vertices.length / 3;
+      for (let i = 0; i < vertices.length; i += 3) {
+        cx += vertices[i]!;
+        cy += vertices[i + 1]!;
+        cz += vertices[i + 2]!;
+      }
+      expect(Math.abs(cx / n)).toBeLessThan(1);
+      expect(Math.abs(cy / n)).toBeLessThan(1);
+      expect(Math.abs(cz / n)).toBeLessThan(1);
+    }
+  });
 });

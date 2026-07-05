@@ -4,7 +4,7 @@ Status: Accepted · Date: 2026-07-05
 
 ## Context
 
-Slice Engine is composed of many small, independently reusable packages
+Vanilla Slice is composed of many small, independently reusable packages
 (`math`, `geometry`, `physics`, `slicing`, `spatial`, `core`, `renderer-three`,
 `angular`) plus consuming apps (`portfolio`, `fruit-demo`). We need enforced
 package boundaries, fast incremental builds, consistent tooling, workspace

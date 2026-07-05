@@ -1,4 +1,4 @@
-# Slice Engine — Copilot Instructions
+# Vanilla Slice — Copilot Instructions
 
 These instructions are binding for all AI-assisted work in this repository. They
 are derived from `AI_CONTEXT.md` and the documents under `docs/`. When any
@@ -6,7 +6,7 @@ instruction here conflicts with a request, surface the conflict before acting.
 
 ## What this project is
 
-**Slice Engine** is a reusable, framework-agnostic, renderer-agnostic TypeScript
+**Vanilla Slice** is a reusable, framework-agnostic, renderer-agnostic TypeScript
 engine for real-time physics, mesh slicing (Fruit Ninja-style), geometry
 processing, and spatial queries. It is **not** a game. Games and demos are
 *consumers* of the engine.

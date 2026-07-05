@@ -1,8 +1,8 @@
-# Slice Engine — Architecture (ARCHITECTURE.md)
+# Vanilla Slice — Architecture (ARCHITECTURE.md)
 
 Status: Draft · Phase: Pre-implementation
 
-This document describes the structural and runtime architecture of Slice Engine:
+This document describes the structural and runtime architecture of Vanilla Slice:
 the layers, the package dependency graph, the ECS model, the slice pipeline, and
 the runtime loop.
 

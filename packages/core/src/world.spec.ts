@@ -116,3 +116,55 @@ describe('World integration total volume', () => {
     expect(computeVolume(box)).toBeCloseTo(8, 6);
   });
 });
+
+describe('World collisions', () => {
+  const dist = (a: readonly number[], b: readonly number[]): number =>
+    Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!);
+
+  it('is enabled by default and pushes overlapping bodies apart', () => {
+    const world = createWorld({ gravity: [0, 0, 0] });
+    const a = world.spawn({ geometry: createBox(1, 1, 1), position: [0, 0, 0] });
+    const b = world.spawn({ geometry: createBox(1, 1, 1), position: [0.5, 0, 0] });
+    for (let i = 0; i < 180; i++) {
+      world.update(1 / 60);
+    }
+    const pa = world.bodies.get(a)!.position;
+    const pb = world.bodies.get(b)!.position;
+    // Two unit boxes should separate toward center distance ≈ 1.
+    expect(dist(pa, pb)).toBeGreaterThan(0.9);
+  });
+
+  it('rests a dynamic box on a static box (stacking)', () => {
+    const world = createWorld({ gravity: [0, -10, 0] });
+    world.spawn({ geometry: createBox(1, 1, 1), position: [0, 0, 0], mass: 0 });
+    const top = world.spawn({ geometry: createBox(1, 1, 1), position: [0, 2, 0] });
+    for (let i = 0; i < 400; i++) {
+      world.update(1 / 60);
+    }
+    // Top box settles resting on the static box: center at ≈ 1.0.
+    expect(world.bodies.get(top)!.position[1]).toBeCloseTo(1, 1);
+  });
+
+  it('skips bodies flagged collides: false', () => {
+    const world = createWorld({ gravity: [0, 0, 0] });
+    const a = world.spawn({ geometry: createBox(1, 1, 1), position: [0, 0, 0] });
+    world.spawn({ geometry: createBox(1, 1, 1), position: [0.5, 0, 0], collides: false });
+    for (let i = 0; i < 60; i++) {
+      world.update(1 / 60);
+    }
+    // With the neighbour opted out, the dynamic body is not pushed.
+    expect(world.bodies.get(a)!.position[0]).toBeCloseTo(0, 6);
+  });
+
+  it('can be disabled globally via config', () => {
+    const world = createWorld({ gravity: [0, 0, 0], collisions: false });
+    const a = world.spawn({ geometry: createBox(1, 1, 1), position: [0, 0, 0] });
+    const b = world.spawn({ geometry: createBox(1, 1, 1), position: [0.5, 0, 0] });
+    for (let i = 0; i < 60; i++) {
+      world.update(1 / 60);
+    }
+    // Bodies phase through each other unchanged.
+    expect(world.bodies.get(a)!.position[0]).toBeCloseTo(0, 6);
+    expect(world.bodies.get(b)!.position[0]).toBeCloseTo(0.5, 6);
+  });
+});

@@ -1,4 +1,4 @@
-import type { RigidBody, Aabb } from '@vanilla-slice/physics';
+import type { RigidBody, Aabb, ConvexShape } from '@vanilla-slice/physics';
 import type { SpatialHash, EntityId } from '@vanilla-slice/spatial';
 import type { Mesh } from '@vanilla-slice/geometry';
 
@@ -47,6 +47,12 @@ export interface WorldConfig {
   ground?: GroundConfig;
   /** Default separation speed applied to slice fragments. */
   sliceSeparationSpeed?: number;
+  /** Enable body-vs-body collision resolution. Defaults to `true`. */
+  collisions?: boolean;
+  /** Default restitution (bounciness) for contacts in `[0, 1]`. Defaults to 0. */
+  restitution?: number;
+  /** Default Coulomb friction coefficient for contacts. Defaults to 0.5. */
+  friction?: number;
 }
 
 /** Fully-resolved configuration with all defaults applied. */
@@ -58,6 +64,9 @@ export interface ResolvedConfig {
   bounds: Aabb;
   ground?: GroundConfig;
   sliceSeparationSpeed: number;
+  collisions: boolean;
+  restitution: number;
+  friction: number;
 }
 
 /** Options for spawning an entity. */
@@ -78,6 +87,14 @@ export interface SpawnOptions {
   meshRef?: string | number;
   tags?: string[];
   name?: string;
+  /**
+   * Convex collider used for body-vs-body collision. Defaults to the convex
+   * hull of `geometry` when present. Bodies without one fall back to their
+   * bounding sphere (`radius`).
+   */
+  collider?: ConvexShape;
+  /** Set to `false` to exclude this body from collision. Defaults to `true`. */
+  collides?: boolean;
 }
 
 /** A snapshot of one renderable entity's transform for the render adapter. */
@@ -107,6 +124,10 @@ export interface SimWorld {
   readonly renderables: Map<EntityId, Renderable>;
   readonly metadata: Map<EntityId, Metadata>;
   readonly spatial: SpatialHash;
+  /** Convex colliders keyed by entity, for body-vs-body collision. */
+  readonly colliders: Map<EntityId, ConvexShape>;
+  /** Entities explicitly excluded from collision (`collides: false`). */
+  readonly nonCollidable: Set<EntityId>;
   spawn(options: SpawnOptions): EntityId;
   despawn(id: EntityId): boolean;
 }

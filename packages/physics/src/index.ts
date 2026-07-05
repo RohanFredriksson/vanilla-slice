@@ -7,6 +7,8 @@ export * from './integration';
 export * from './fixed-timestep';
 export * from './aabb';
 export * from './collision';
+export * from './convex';
+export * from './solver';
 export * from './cleanup';
 
 export const PHYSICS_PACKAGE = '@vanilla-slice/physics';

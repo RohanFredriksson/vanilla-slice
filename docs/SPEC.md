@@ -1,10 +1,10 @@
-# Slice Engine — Specification (SPEC.md)
+# Vanilla Slice — Specification (SPEC.md)
 
 Status: Draft · Phase: Pre-implementation
 
 ## 1. Overview
 
-Slice Engine is a reusable TypeScript engine providing real-time physics
+Vanilla Slice is a reusable TypeScript engine providing real-time physics
 simulation, mesh slicing, geometry processing, spatial queries, and rendering
 via adapters. It is framework-agnostic and renderer-agnostic. Games and demos
 consume the engine; the engine is never a game itself.

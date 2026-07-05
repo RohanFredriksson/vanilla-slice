@@ -5,5 +5,6 @@ export * from './mesh';
 export * from './plane';
 export * from './primitives';
 export * from './split';
+export * from './hull';
 
 export const GEOMETRY_PACKAGE = '@vanilla-slice/geometry';
