@@ -9,5 +9,9 @@
   },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts", "dist"],
-  "references": [{ "path": "../../packages/core" }, { "path": "../../packages/renderer-three" }]
+  "references": [
+    { "path": "../../packages/core" },
+    { "path": "../../packages/renderer-three" },
+    { "path": "../../packages/runtime" }
+  ]
 }

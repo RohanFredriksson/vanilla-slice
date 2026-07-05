@@ -1,18 +1,18 @@
-import { createBody } from '@slice/physics';
-import type { RigidBody, Aabb } from '@slice/physics';
+import { createBody } from '@vanilla-slice/physics';
+import type { RigidBody, Aabb } from '@vanilla-slice/physics';
 import {
   createSpatialHash,
   insert,
   remove as spatialRemove,
-} from '@slice/spatial';
-import type { SpatialHash, EntityId } from '@slice/spatial';
+} from '@vanilla-slice/spatial';
+import type { SpatialHash, EntityId } from '@vanilla-slice/spatial';
 import {
   createFixedStepper,
   advance,
   alpha as stepperAlpha,
-} from '@slice/physics';
-import type { FixedStepper } from '@slice/physics';
-import type { SliceVolume } from '@slice/slicing';
+} from '@vanilla-slice/physics';
+import type { FixedStepper } from '@vanilla-slice/physics';
+import type { SliceVolume } from '@vanilla-slice/slicing';
 import {
   stepPhysics,
   syncSpatial,

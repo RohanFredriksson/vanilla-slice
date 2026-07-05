@@ -5,10 +5,10 @@ import {
   type PerspectiveCamera,
   type OrthographicCamera,
 } from 'three';
-import type { Mesh as EngineMesh } from '@slice/core';
-import { Mat4 } from '@slice/math';
+import type { Mesh as EngineMesh } from '@vanilla-slice/core';
+import { Mat4 } from '@vanilla-slice/math';
 
-/** Column-major 4x4 matrix (matches `@slice/math`'s `Mat4`). */
+/** Column-major 4x4 matrix (matches `@vanilla-slice/math`'s `Mat4`). */
 type Mat4T = ReturnType<typeof Mat4.create>;
 
 type Camera = PerspectiveCamera | OrthographicCamera;
@@ -31,10 +31,10 @@ export function meshToBufferGeometry(mesh: EngineMesh): BufferGeometry {
 
 /**
  * Compute the inverse view-projection matrix of a Three.js camera as a
- * `@slice/math` `Mat4`. Three's `Matrix4.elements` are column-major, matching
+ * `@vanilla-slice/math` `Mat4`. Three's `Matrix4.elements` are column-major, matching
  * the engine's matrix layout, so the elements copy across directly.
  *
- * The result feeds `@slice/slicing`'s `rayFromNdc` / `rayFromScreen` to convert
+ * The result feeds `@vanilla-slice/slicing`'s `rayFromNdc` / `rayFromScreen` to convert
  * a screen gesture into a world-space ray.
  */
 export function inverseViewProjection(camera: Camera): Mat4T {

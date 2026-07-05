@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { Mat4 } from '@slice/math';
-import { createBox } from '@slice/geometry';
+import { Mat4 } from '@vanilla-slice/math';
+import { createBox } from '@vanilla-slice/geometry';
 import {
   createSliceVolume,
   sliceVolumeFromSwipe,
   rayFromNdc,
-} from '@slice/slicing';
-import { createPlane, fromNormalAndPoint } from '@slice/geometry';
+} from '@vanilla-slice/slicing';
+import { createPlane, fromNormalAndPoint } from '@vanilla-slice/geometry';
 import { createWorld } from './world';
 
 describe('World slicing (end-to-end)', () => {

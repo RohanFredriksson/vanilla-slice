@@ -1,6 +1,6 @@
-import { createMesh, getVertex, vertexCount } from '@slice/geometry';
-import type { Mesh } from '@slice/geometry';
-import type { Aabb } from '@slice/physics';
+import { createMesh, getVertex, vertexCount } from '@vanilla-slice/geometry';
+import type { Mesh } from '@vanilla-slice/geometry';
+import type { Aabb } from '@vanilla-slice/physics';
 import type { Vec3T } from './types';
 
 /** Return a copy of `mesh` with every vertex shifted so `center` becomes the origin. */

@@ -1,10 +1,10 @@
-import { Vec3, EPSILON } from '@slice/math';
+import { Vec3, EPSILON } from '@vanilla-slice/math';
 import { createMesh, getVertex } from './mesh';
 import type { Mesh } from './mesh';
 import { signedDistanceToPoint } from './plane';
 import type { Plane } from './plane';
 
-/** Mutable 3-component vector (matches `@slice/math`'s `Vec3`). */
+/** Mutable 3-component vector (matches `@vanilla-slice/math`'s `Vec3`). */
 type Vec3T = ReturnType<typeof Vec3.create>;
 
 /** Options controlling a mesh split. */

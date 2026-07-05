@@ -1,5 +1,5 @@
 {
-  "name": "@slice/slicing",
+  "name": "@vanilla-slice/slicing",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,9 +12,9 @@
     }
   },
   "dependencies": {
-    "@slice/geometry": "*",
-    "@slice/spatial": "*",
-    "@slice/math": "*"
+    "@vanilla-slice/geometry": "*",
+    "@vanilla-slice/spatial": "*",
+    "@vanilla-slice/math": "*"
   },
   "nx": {
     "tags": ["scope:slicing", "layer:core"],

@@ -27,7 +27,7 @@ consume the engine; the engine is never a game itself.
 ## 4. Stakeholders & Consumers
 
 - **Engine developers** — maintain core packages and adapters.
-- **App developers** — build demos/portfolio consuming published packages.
+- **App developers** — build demos and sites consuming published packages.
 - **Future integrators** — non-game domains (CAD, destruction, VR).
 
 ## 5. Functional Requirements
@@ -68,9 +68,12 @@ consume the engine; the engine is never a game itself.
 - FR-23: Provide camera and raycasting utilities.
 - FR-24: Never own or mutate simulation state.
 
-### 5.7 Framework Integration (adapter)
-- FR-25: Host a canvas and manage component lifecycle (Angular first).
-- FR-26: Must not drive or gate the engine update/render loop.
+### 5.7 Runtime & Framework Integration
+- FR-25: Provide a framework-agnostic imperative loop (`runtime`) that ticks the
+  engine and forwards input (swipe-to-slice); the engine drives the loop.
+- FR-26: Framework integrations (Angular, React, …) live in their own
+  repositories, consuming the engine + `runtime`; they host a canvas and manage
+  lifecycle but must not drive or gate the engine update/render loop.
 
 ## 6. Non-Functional Requirements
 
@@ -116,7 +119,7 @@ framework-agnostic.
 - A world can spawn bodies, apply gravity, integrate motion, and cleanup.
 - A slice gesture produces fragments with impulses in a headless test.
 - Three.js adapter renders engine state without owning simulation.
-- Fruit demo runs the imperative loop independent of Angular.
+- The slicing-game demo runs the imperative loop independent of any framework.
 
 ## 10. Open Questions
 

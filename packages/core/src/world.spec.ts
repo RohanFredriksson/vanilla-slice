@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createBox, computeVolume } from '@slice/geometry';
+import { createBox, computeVolume } from '@vanilla-slice/geometry';
 import { createWorld, World } from './world';
 
 describe('World lifecycle', () => {

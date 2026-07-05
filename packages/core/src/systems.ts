@@ -1,6 +1,6 @@
-import { Vec3, Quat } from '@slice/math';
-import { integrateBody, resolveHalfSpace, isOutOfBounds } from '@slice/physics';
-import { insert } from '@slice/spatial';
+import { Vec3, Quat } from '@vanilla-slice/math';
+import { integrateBody, resolveHalfSpace, isOutOfBounds } from '@vanilla-slice/physics';
+import { insert } from '@vanilla-slice/spatial';
 import { sphereAabb } from './mesh-util';
 import type { SimWorld, RenderItem, EntityId } from './types';
 

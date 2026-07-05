@@ -6,7 +6,7 @@ import {
   createPlane,
   fromNormalAndPoint,
   createSliceVolume,
-} from '@slice/core';
+} from '@vanilla-slice/core';
 import { ThreeRenderer } from './three-renderer';
 
 describe('ThreeRenderer', () => {

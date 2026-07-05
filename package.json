@@ -1,5 +1,5 @@
 {
-  "name": "slice-engine",
+  "name": "vanilla-slice",
   "version": "0.0.0",
   "private": true,
   "description": "Slice Engine — framework-agnostic, renderer-agnostic TypeScript engine for physics, mesh slicing, geometry, and spatial queries.",
@@ -26,6 +26,7 @@
     "nx": "latest",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.0.0",
+    "vite": "^6.0.0",
     "vitest": "^3.0.0"
   }
 }

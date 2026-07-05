@@ -1,10 +1,10 @@
-import type { ReadonlyVec3 } from '@slice/math';
+import type { ReadonlyVec3 } from '@vanilla-slice/math';
 
 /** Identifier for an entity tracked by the spatial structure. */
 export type EntityId = number;
 
 /**
- * Axis-aligned bounding box. Structurally compatible with `@slice/physics`'s
+ * Axis-aligned bounding box. Structurally compatible with `@vanilla-slice/physics`'s
  * `Aabb`, so bodies' bounds can be passed to spatial queries without a
  * package dependency.
  */

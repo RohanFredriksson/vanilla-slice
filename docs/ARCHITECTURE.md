@@ -13,8 +13,12 @@ lower layers; lower layers never depend on higher ones.
 
 ```mermaid
 flowchart TD
-    subgraph FI["Framework Integration (adapter)"]
-        ANG[angular: canvas hosting, UI, lifecycle]
+    subgraph CONS["Consumers"]
+        APPS[apps: slicing-game, spinning-slices]
+        EXT[external framework integrations<br/>(Angular, React, … — own repos)]
+    end
+    subgraph RT["Runtime (framework-agnostic)"]
+        RUN[runtime: engine loop + swipe input]
     end
     subgraph RA["Rendering Adapters"]
         R3[renderer-three: meshes, transforms, raycasting]
@@ -28,8 +32,14 @@ flowchart TD
         MATH[math]
     end
 
-    ANG --> R3
-    ANG --> CORE
+    APPS --> R3
+    APPS --> RUN
+    APPS --> CORE
+    EXT --> R3
+    EXT --> RUN
+    EXT --> CORE
+    RUN --> CORE
+    RUN --> MATH
     R3 --> CORE
     R3 --> MATH
     CORE --> PHYS
@@ -50,7 +60,9 @@ Rules encoded above:
 - `slicing` depends on `geometry`, `spatial`, `math`.
 - `core` orchestrates core packages; it does not depend on adapters.
 - `renderer-three` depends on `core` + `math` (+ Three.js), never the reverse.
-- `angular` depends on `core` (+ optionally `renderer-three`), never the reverse.
+- `runtime` depends on `core` + `math`, never the reverse.
+- Framework integrations live in their own repositories (ADR 0006) and consume
+  the published engine; no framework package ships in this monorepo.
 
 ## 2. Package dependency graph
 
@@ -62,11 +74,15 @@ spatial     → math
 slicing     → geometry, spatial, math
 core        → physics, slicing, spatial, geometry, math
 renderer-three → core, math, three
-angular     → core, [renderer-three]
+runtime     → core, math
 ```
 
 No circular dependencies are permitted. To break a would-be cycle, introduce a
 new package or invert the dependency; never create a loop.
+
+> **Framework integrations** (Angular, React, …) live in their own repositories
+> (ADR 0006), consuming the published engine + `runtime`. A reference Angular
+> host is kept at `docs/examples/angular/` (not built or tested).
 
 ## 3. Entity-Component-System (light ECS)
 
@@ -182,6 +198,7 @@ writes back into simulation ownership data.
 
 - New renderers are added as sibling adapters to `renderer-three` depending only
   on `core` + `math`.
-- New frameworks are added as sibling integrations to `angular`.
+- New framework integrations live in their own repositories, consuming the
+  published engine + `runtime` (ADR 0006).
 - New simulation behavior is added as new systems/components in core packages,
   preserving boundaries and the one-way dependency direction.

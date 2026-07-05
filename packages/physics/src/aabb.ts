@@ -1,5 +1,5 @@
-import { Vec3 } from '@slice/math';
-import type { ReadonlyVec3 } from '@slice/math';
+import { Vec3 } from '@vanilla-slice/math';
+import type { ReadonlyVec3 } from '@vanilla-slice/math';
 
 type Vec3T = ReturnType<typeof Vec3.create>;
 

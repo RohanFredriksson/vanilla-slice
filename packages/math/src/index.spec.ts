@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { MATH_PACKAGE, Vec3, Quat, Mat4, EPSILON } from './index';
 import type { Vec3 as Vec3Type } from './index';
 
-describe('@slice/math', () => {
+describe('@vanilla-slice/math', () => {
   it('exposes its package marker', () => {
-    expect(MATH_PACKAGE).toBe('@slice/math');
+    expect(MATH_PACKAGE).toBe('@vanilla-slice/math');
   });
 
   it('re-exports scalar utilities', () => {

@@ -1,5 +1,5 @@
 {
-  "name": "@slice/angular",
+  "name": "@vanilla-slice/runtime",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,12 +12,11 @@
     }
   },
   "dependencies": {
-    "@slice/core": "*",
-    "@slice/renderer-three": "*",
-    "@slice/math": "*"
+    "@vanilla-slice/core": "*",
+    "@vanilla-slice/math": "*"
   },
   "nx": {
-    "tags": ["scope:angular", "layer:framework"],
+    "tags": ["scope:runtime", "layer:runtime"],
     "targets": {
       "build": {},
       "lint": {},

@@ -1,6 +1,6 @@
-import { Vec3 } from '@slice/math';
-import { splitMeshByPlane, vertexCount, getVertex } from '@slice/geometry';
-import type { Mesh } from '@slice/geometry';
+import { Vec3 } from '@vanilla-slice/math';
+import { splitMeshByPlane, vertexCount, getVertex } from '@vanilla-slice/geometry';
+import type { Mesh } from '@vanilla-slice/geometry';
 import type { SliceVolume } from './slice-volume';
 
 type Vec3T = ReturnType<typeof Vec3.create>;

@@ -4,7 +4,13 @@ import nx from '@nx/eslint-plugin';
 
 export default tseslint.config(
   {
-    ignores: ['**/dist', '**/node_modules', '.nx'],
+    ignores: [
+      '**/dist',
+      '**/dist-web',
+      '**/node_modules',
+      '.nx',
+      '**/vite.config.ts',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -57,19 +63,15 @@ export default tseslint.config(
               onlyDependOnLibsWithTags: ['scope:core', 'scope:math'],
             },
             {
-              sourceTag: 'scope:angular',
-              onlyDependOnLibsWithTags: [
-                'scope:core',
-                'scope:renderer',
-                'scope:math',
-              ],
+              sourceTag: 'scope:runtime',
+              onlyDependOnLibsWithTags: ['scope:core', 'scope:math'],
             },
             {
               sourceTag: 'layer:app',
               onlyDependOnLibsWithTags: [
                 'layer:core',
                 'layer:adapter',
-                'layer:framework',
+                'layer:runtime',
               ],
             },
           ],

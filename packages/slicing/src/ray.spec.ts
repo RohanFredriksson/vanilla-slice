@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Mat4, Vec3 } from '@slice/math';
+import { Mat4, Vec3 } from '@vanilla-slice/math';
 import { createRay, rayAt, screenToNdc, rayFromNdc } from './ray';
 
 describe('ray', () => {

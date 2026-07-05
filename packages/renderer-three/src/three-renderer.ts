@@ -10,8 +10,8 @@ import {
   type PerspectiveCamera,
   type OrthographicCamera,
 } from 'three';
-import type { Mesh as EngineMesh } from '@slice/core';
-import type { EntityId, RenderItem } from '@slice/core';
+import type { Mesh as EngineMesh } from '@vanilla-slice/core';
+import type { EntityId, RenderItem } from '@vanilla-slice/core';
 import { meshToBufferGeometry } from './three-utils';
 
 type Camera = PerspectiveCamera | OrthographicCamera;

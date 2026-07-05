@@ -1,0 +1,34 @@
+{
+  "name": "@vanilla-slice/spinning-slices",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@vanilla-slice/core": "*",
+    "@vanilla-slice/renderer-three": "*",
+    "@vanilla-slice/runtime": "*",
+    "three": "^0.169.0"
+  },
+  "nx": {
+    "tags": ["layer:app", "type:app"],
+    "targets": {
+      "build": {},
+      "lint": {},
+      "test": {},
+      "serve": {
+        "executor": "nx:run-commands",
+        "options": { "command": "vite", "cwd": "apps/spinning-slices" }
+      },
+      "bundle": {
+        "executor": "nx:run-commands",
+        "options": { "command": "vite build", "cwd": "apps/spinning-slices" },
+        "outputs": ["{projectRoot}/dist-web"],
+        "cache": true
+      },
+      "preview": {
+        "executor": "nx:run-commands",
+        "options": { "command": "vite preview", "cwd": "apps/spinning-slices" }
+      }
+    }
+  }
+}

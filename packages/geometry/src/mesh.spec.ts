@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Vec3, Mat4 } from '@slice/math';
+import { Vec3, Mat4 } from '@vanilla-slice/math';
 import {
   createMesh,
   vertexCount,

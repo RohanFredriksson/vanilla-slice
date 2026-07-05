@@ -1,5 +1,5 @@
 {
-  "name": "@slice/physics",
+  "name": "@vanilla-slice/physics",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     }
   },
   "dependencies": {
-    "@slice/math": "*"
+    "@vanilla-slice/math": "*"
   },
   "nx": {
     "tags": ["scope:physics", "layer:core"],

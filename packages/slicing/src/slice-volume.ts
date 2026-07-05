@@ -1,13 +1,13 @@
-import { Vec3 } from '@slice/math';
-import type { ReadonlyVec3 } from '@slice/math';
+import { Vec3 } from '@vanilla-slice/math';
+import type { ReadonlyVec3 } from '@vanilla-slice/math';
 import {
   createPlane,
   fromNormalAndPoint,
   signedDistanceToPoint,
-} from '@slice/geometry';
-import type { Plane } from '@slice/geometry';
-import { querySphere } from '@slice/spatial';
-import type { SpatialHash, EntityId } from '@slice/spatial';
+} from '@vanilla-slice/geometry';
+import type { Plane } from '@vanilla-slice/geometry';
+import { querySphere } from '@vanilla-slice/spatial';
+import type { SpatialHash, EntityId } from '@vanilla-slice/spatial';
 
 type Vec3T = ReturnType<typeof Vec3.create>;
 

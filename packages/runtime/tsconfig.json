@@ -4,15 +4,9 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
-    "lib": ["ES2022", "DOM"],
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts", "dist"],
-  "references": [
-    { "path": "../core" },
-    { "path": "../renderer-three" },
-    { "path": "../math" }
-  ]
+  "references": [{ "path": "../core" }, { "path": "../math" }]
 }

@@ -1,12 +1,12 @@
-import type { RigidBody, Aabb } from '@slice/physics';
-import type { SpatialHash, EntityId } from '@slice/spatial';
-import type { Mesh } from '@slice/geometry';
+import type { RigidBody, Aabb } from '@vanilla-slice/physics';
+import type { SpatialHash, EntityId } from '@vanilla-slice/spatial';
+import type { Mesh } from '@vanilla-slice/geometry';
 
 export type { EntityId };
 
-/** Mutable 3-component vector (matches `@slice/math`'s `Vec3`). */
+/** Mutable 3-component vector (matches `@vanilla-slice/math`'s `Vec3`). */
 export type Vec3T = [number, number, number];
-/** Mutable quaternion (matches `@slice/math`'s `Quat`). */
+/** Mutable quaternion (matches `@vanilla-slice/math`'s `Quat`). */
 export type QuatT = [number, number, number, number];
 
 /** Renderable component: an opaque handle the render adapter maps to a mesh. */

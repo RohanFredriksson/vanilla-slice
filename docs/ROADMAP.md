@@ -22,7 +22,7 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 - [x] Create Nx monorepo.
 - [x] Scaffold empty packages: `math`, `geometry`, `physics`, `slicing`,
       `spatial`, `core`, `renderer-three`, `angular`.
-- [x] Scaffold apps: `portfolio`, `fruit-demo`.
+- [x] Scaffold apps: `spinning-slices`, `slicing-game`.
 - [x] Configure dependency-boundary lint rules (enforce one-way layering).
 - [x] Configure build caching, testing, and CI.
 
@@ -44,9 +44,29 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 - [x] Verify renderer owns no simulation state.
 
 ## Phase 6 — Framework Integration & Demo
-- [ ] `angular`: canvas hosting, lifecycle integration, UI components.
-- [ ] `fruit-demo`: imperative loop independent of Angular change detection.
-- [ ] `portfolio`: showcase integration.
+- [x] `angular`: canvas hosting + lifecycle (EngineHostComponent) and
+      framework-agnostic engine loop + swipe-to-slice input.
+- [x] `slicing-game`: Fruit Ninja-style game; imperative loop independent of any
+      framework change detection.
+- [x] `spinning-slices`: spinning-object slicing showcase.
+
+Run the demos in a browser (Vite dev server; engine packages resolve to source):
+- `nx serve slicing-game` → http://localhost:5173
+- `nx serve spinning-slices` → http://localhost:5174
+- Production bundle: `nx bundle <app>` (outputs `apps/<app>/dist-web`),
+  preview with `nx preview <app>`.
+
+## Phase 6.5 — Extract runtime, remove Angular (done, ADR 0006)
+- [x] Create `packages/runtime` (framework-agnostic): move `EngineLoop`,
+      `SwipeTracker`, `SwipeSlicer`, `intersectRayPlane`, `swipeToSliceVolume`
+      and their tests. Depends on `core` + `math`.
+- [x] Repoint `slicing-game` and `spinning-slices` at `@vanilla-slice/runtime`.
+- [x] Copy `EngineHostComponent` to `docs/examples/angular/` (reference only).
+- [x] Delete `packages/angular`; remove `@angular/core`, `rxjs`, `zone.js`,
+      `tslib`; drop the `scope:angular` boundary rules, tsconfig paths, and
+      references.
+- [x] Update ARCHITECTURE / SPEC / copilot-instructions to match.
+- [x] Verify build + lint + test; confirm the Angular XSS advisory is gone.
 
 ## Phase 7 — Hardening & Publishing
 - [ ] Performance passes (allocation profiling, spatial tuning).

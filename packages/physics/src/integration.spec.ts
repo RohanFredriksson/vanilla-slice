@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Quat, Vec3 } from '@slice/math';
+import { Quat, Vec3 } from '@vanilla-slice/math';
 import { createBody, applyForce } from './body';
 import { integrateBody, integrateBodies } from './integration';
 

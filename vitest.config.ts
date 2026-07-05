@@ -11,12 +11,13 @@ const fromRoot = (relativePath: string): string =>
 export default defineConfig({
   resolve: {
     alias: {
-      '@slice/math': fromRoot('./packages/math/src/index.ts'),
-      '@slice/geometry': fromRoot('./packages/geometry/src/index.ts'),
-      '@slice/physics': fromRoot('./packages/physics/src/index.ts'),
-      '@slice/spatial': fromRoot('./packages/spatial/src/index.ts'),
-      '@slice/slicing': fromRoot('./packages/slicing/src/index.ts'),
-      '@slice/core': fromRoot('./packages/core/src/index.ts'),
+      '@vanilla-slice/math': fromRoot('./packages/math/src/index.ts'),
+      '@vanilla-slice/geometry': fromRoot('./packages/geometry/src/index.ts'),
+      '@vanilla-slice/physics': fromRoot('./packages/physics/src/index.ts'),
+      '@vanilla-slice/spatial': fromRoot('./packages/spatial/src/index.ts'),
+      '@vanilla-slice/slicing': fromRoot('./packages/slicing/src/index.ts'),
+      '@vanilla-slice/core': fromRoot('./packages/core/src/index.ts'),
+      '@vanilla-slice/runtime': fromRoot('./packages/runtime/src/index.ts'),
     },
   },
   test: {

@@ -8,8 +8,8 @@
     { "path": "packages/slicing" },
     { "path": "packages/core" },
     { "path": "packages/renderer-three" },
-    { "path": "packages/angular" },
-    { "path": "apps/portfolio" },
-    { "path": "apps/fruit-demo" }
+    { "path": "packages/runtime" },
+    { "path": "apps/spinning-slices" },
+    { "path": "apps/slicing-game" }
   ]
 }

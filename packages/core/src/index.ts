@@ -1,4 +1,4 @@
-// @slice/core — light ECS world orchestrating entities, components, and systems.
+// @vanilla-slice/core — light ECS world orchestrating entities, components, and systems.
 // Orchestrates the core packages (physics, slicing, spatial, geometry, math);
 // it never depends on rendering adapters or framework integrations
 // (see ARCHITECTURE.md, ADR 0002/0003).
@@ -10,8 +10,8 @@ export * from './slice-system';
 export * from './world';
 
 // Facade: re-export the curated public API of the underlying engine packages so
-// adapters and apps depend on @slice/core alone (respecting the layering rules).
-export type { Mesh, Plane } from '@slice/geometry';
+// adapters and apps depend on @vanilla-slice/core alone (respecting the layering rules).
+export type { Mesh, Plane } from '@vanilla-slice/geometry';
 export {
   createBox,
   createPlane,
@@ -19,14 +19,14 @@ export {
   fromCoplanarPoints,
   computeVolume,
   computeBounds,
-} from '@slice/geometry';
-export type { SliceVolume, Fragment, Ray } from '@slice/slicing';
+} from '@vanilla-slice/geometry';
+export type { SliceVolume, Fragment, Ray } from '@vanilla-slice/slicing';
 export {
   createSliceVolume,
   sliceVolumeFromSwipe,
   screenToNdc,
   rayFromNdc,
   rayFromScreen,
-} from '@slice/slicing';
+} from '@vanilla-slice/slicing';
 
-export const CORE_PACKAGE = '@slice/core';
+export const CORE_PACKAGE = '@vanilla-slice/core';

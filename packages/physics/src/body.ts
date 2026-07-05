@@ -1,5 +1,5 @@
-import { Vec3, Quat } from '@slice/math';
-import type { ReadonlyVec3, ReadonlyQuat } from '@slice/math';
+import { Vec3, Quat } from '@vanilla-slice/math';
+import type { ReadonlyVec3, ReadonlyQuat } from '@vanilla-slice/math';
 
 type Vec3T = ReturnType<typeof Vec3.create>;
 type QuatT = ReturnType<typeof Quat.create>;

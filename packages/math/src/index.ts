@@ -1,4 +1,4 @@
-// @slice/math — vectors, matrices, quaternions, and scalar utilities.
+// @vanilla-slice/math — vectors, matrices, quaternions, and scalar utilities.
 // This package depends on nothing (see ARCHITECTURE.md).
 //
 // Vector/matrix operations are grouped into namespaces that share a name with
@@ -12,4 +12,4 @@ export * as Vec3 from './vec3';
 export * as Mat4 from './mat4';
 export * as Quat from './quat';
 
-export const MATH_PACKAGE = '@slice/math';
+export const MATH_PACKAGE = '@vanilla-slice/math';

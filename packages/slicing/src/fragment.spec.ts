@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createPlane, fromNormalAndPoint, computeVolume, createBox, signedDistanceToPoint } from '@slice/geometry';
+import { createPlane, fromNormalAndPoint, computeVolume, createBox, signedDistanceToPoint } from '@vanilla-slice/geometry';
 import { createSliceVolume } from './slice-volume';
 import { sliceMesh, computeCentroid } from './fragment';
 

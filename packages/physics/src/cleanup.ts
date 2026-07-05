@@ -1,4 +1,4 @@
-import type { ReadonlyVec3 } from '@slice/math';
+import type { ReadonlyVec3 } from '@vanilla-slice/math';
 import { aabbContainsPoint } from './aabb';
 import type { Aabb } from './aabb';
 

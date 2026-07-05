@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PerspectiveCamera } from 'three';
-import { createBox, rayFromNdc } from '@slice/core';
-import { Vec3 } from '@slice/math';
+import { createBox, rayFromNdc } from '@vanilla-slice/core';
+import { Vec3 } from '@vanilla-slice/math';
 import { meshToBufferGeometry, inverseViewProjection } from './three-utils';
 
 describe('meshToBufferGeometry', () => {

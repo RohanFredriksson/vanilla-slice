@@ -26,13 +26,15 @@ processing, and spatial queries. It is **not** a game. Games and demos are
 ## Layering
 
 ```
-Core Engine (framework-free)  →  Rendering Adapters  →  Framework Integration
-math, geometry, physics,          renderer-three         angular (UI, canvas
-slicing, spatial, core                                    hosting only)
+Core Engine (framework-free)  →  Rendering Adapters  →  Runtime / Consumers
+math, geometry, physics,          renderer-three         runtime (loop + input),
+slicing, spatial, core                                   apps, external framework
+                                                         integrations
 ```
 
-Allowed dependency direction is one-way: framework integration depends on
-adapters, adapters depend on core; never the reverse.
+Allowed dependency direction is one-way: consumers depend on adapters/runtime,
+adapters and runtime depend on core; never the reverse. **Framework integrations
+(Angular, React, …) live in their own repositories** (ADR 0006), not here.
 
 ## Package boundaries
 
@@ -44,11 +46,14 @@ packages/slicing     # slice volume, candidate filtering, fragment generation
 packages/spatial     # spatial hash / octree / BVH broad-phase queries
 packages/core        # ECS world, entity/component/system orchestration
 packages/renderer-three  # engine state → Three.js meshes, raycasting
-packages/angular     # lifecycle integration, UI components, canvas hosting
+packages/runtime     # framework-agnostic engine loop + swipe-to-slice input
 
-apps/portfolio       # portfolio site consuming the engine
-apps/fruit-demo      # Fruit Ninja-style slicing demo
+apps/slicing-game      # Fruit Ninja-style slicing game
+apps/spinning-slices   # spinning-object slicing showcase
 ```
+
+The engine is framework-agnostic: no framework package lives in this repo. A
+reference Angular host is kept at `docs/examples/angular/` (not built/tested).
 
 Dependency rules:
 - `math` depends on nothing.
@@ -56,7 +61,8 @@ Dependency rules:
 - `slicing` depends on `geometry`, `spatial`, `math`.
 - `core` orchestrates the above; it depends on core packages, not adapters.
 - `renderer-three` depends on `core` + `math` + Three.js.
-- `angular` depends on `core` (+ optionally `renderer-three`), never the reverse.
+- `runtime` depends on `core` + `math`; never the reverse.
+- apps depend on `core`, `renderer-three`, and `runtime`.
 
 ## Architecture model
 

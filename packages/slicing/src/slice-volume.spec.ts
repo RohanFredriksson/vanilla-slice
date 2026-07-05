@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { Vec3 } from '@slice/math';
-import { signedDistanceToPoint } from '@slice/geometry';
-import { createSpatialHash, insert } from '@slice/spatial';
+import { Vec3 } from '@vanilla-slice/math';
+import { signedDistanceToPoint } from '@vanilla-slice/geometry';
+import { createSpatialHash, insert } from '@vanilla-slice/spatial';
 import {
   createSliceVolume,
   sliceVolumeFromSwipe,
@@ -9,7 +9,7 @@ import {
   filterSliceCandidates,
   querySliceCandidates,
 } from './slice-volume';
-import { createPlane, fromNormalAndPoint } from '@slice/geometry';
+import { createPlane, fromNormalAndPoint } from '@vanilla-slice/geometry';
 
 describe('slice volume', () => {
   it('builds a plane spanned by the swipe and view directions', () => {

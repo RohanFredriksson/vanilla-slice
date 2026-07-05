@@ -1,5 +1,5 @@
-import { Vec3, Quat } from '@slice/math';
-import type { ReadonlyVec3 } from '@slice/math';
+import { Vec3, Quat } from '@vanilla-slice/math';
+import type { ReadonlyVec3 } from '@vanilla-slice/math';
 import { clearForces, isStatic } from './body';
 import type { RigidBody } from './body';
 

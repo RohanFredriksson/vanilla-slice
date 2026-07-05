@@ -1,12 +1,12 @@
-import { Mat4 } from '@slice/math';
-import { cloneMesh, transformMesh, computeVolume } from '@slice/geometry';
-import { getMass } from '@slice/physics';
+import { Mat4 } from '@vanilla-slice/math';
+import { cloneMesh, transformMesh, computeVolume } from '@vanilla-slice/geometry';
+import { getMass } from '@vanilla-slice/physics';
 import {
   querySliceCandidates,
   sliceIntersectsSphere,
   sliceMesh,
-} from '@slice/slicing';
-import type { SliceVolume } from '@slice/slicing';
+} from '@vanilla-slice/slicing';
+import type { SliceVolume } from '@vanilla-slice/slicing';
 import { recenterMesh, boundingRadius } from './mesh-util';
 import type { SimWorld, SliceOutcome, Vec3T } from './types';
 
