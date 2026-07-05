@@ -29,7 +29,7 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 ## Phase 3 — Core Engine (framework-free)
 - [x] `math`: vectors, matrices, quaternions.
 - [x] `geometry`: mesh representation, plane intersection, mesh splitting, caps.
-- [ ] `physics`: fixed-timestep integration, rigid bodies, gravity, cleanup.
+- [x] `physics`: fixed-timestep integration, rigid bodies, gravity, cleanup.
 - [ ] `spatial`: broad-phase structure and region/neighbor queries.
 - [ ] `core`: ECS world, entities, components, systems, `createWorld`/`spawn`.
 - [ ] Headless tests for all of the above.
