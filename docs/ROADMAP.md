@@ -30,7 +30,7 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 - [x] `math`: vectors, matrices, quaternions.
 - [x] `geometry`: mesh representation, plane intersection, mesh splitting, caps.
 - [x] `physics`: fixed-timestep integration, rigid bodies, gravity, cleanup.
-- [ ] `spatial`: broad-phase structure and region/neighbor queries.
+- [x] `spatial`: broad-phase structure and region/neighbor queries.
 - [ ] `core`: ECS world, entities, components, systems, `createWorld`/`spawn`.
 - [ ] Headless tests for all of the above.
 
