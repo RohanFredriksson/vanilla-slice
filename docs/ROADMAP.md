@@ -31,13 +31,13 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 - [x] `geometry`: mesh representation, plane intersection, mesh splitting, caps.
 - [x] `physics`: fixed-timestep integration, rigid bodies, gravity, cleanup.
 - [x] `spatial`: broad-phase structure and region/neighbor queries.
-- [ ] `core`: ECS world, entities, components, systems, `createWorld`/`spawn`.
-- [ ] Headless tests for all of the above.
+- [x] `core`: ECS world, entities, components, systems, `createWorld`/`spawn`.
+- [x] Headless tests for all of the above.
 
 ## Phase 4 — Slicing
 - [x] `slicing`: bounded slice volume, candidate filtering, fragment generation,
       impulse application.
-- [ ] End-to-end headless slice test (gesture → fragments).
+- [x] End-to-end headless slice test (gesture → fragments).
 
 ## Phase 5 — Rendering Adapter
 - [ ] `renderer-three`: engine state → meshes, transform sync, camera, raycasting.
