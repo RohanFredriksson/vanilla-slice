@@ -22,6 +22,10 @@ export function toDegrees(radians: number): number {
   return radians * RAD_TO_DEG;
 }
 
+export function toDegrees(radians: number): number {
+  return radians * RAD_TO_DEG;
+}
+
 /**
  * Relative + absolute approximate equality for scalars. Two values are equal
  * when their difference is within `epsilon` scaled by their magnitude.
