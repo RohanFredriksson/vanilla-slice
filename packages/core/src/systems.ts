@@ -11,6 +11,7 @@ import type { RigidBody, ContactManifold } from '@vanilla-slice/physics';
 import { insert, getPotentialPairs } from '@vanilla-slice/spatial';
 import { sphereAabb } from './mesh-util';
 import type { SimWorld, RenderItem, EntityId } from './types';
+import type { ConvexShape } from '@vanilla-slice/physics';
 
 /**
  * PhysicsSystem — advance every body by one fixed step: apply gravity/forces via
@@ -52,6 +53,7 @@ function sphereManifold(a: RigidBody, b: RigidBody): ContactManifold | null {
  * CollisionSystem — resolve body-vs-body contacts. Broad-phase candidate pairs
  * come from the spatial hash; narrow-phase uses convex hulls (GJK/EPA + face
  * clipping) when both bodies have a collider, falling back to bounding spheres.
+ * Bodies with a compound (decomposed) collider test each of their hulls.
  * Static/static and opted-out (`collides: false`) pairs are skipped.
  */
 export function resolveCollisions(world: SimWorld): void {
@@ -68,6 +70,37 @@ export function resolveCollisions(world: SimWorld): void {
     if (!a || !b || (a.invMass === 0 && b.invMass === 0)) {
       continue;
     }
+
+    const compoundA = world.compoundColliders.get(idA);
+    const compoundB = world.compoundColliders.get(idB);
+    if (compoundA || compoundB) {
+      // Compound path: test every hull pair (only allocates for concave bodies).
+      const single = (id: EntityId): ConvexShape[] | undefined => {
+        const shape = world.colliders.get(id);
+        return shape ? [shape] : undefined;
+      };
+      const hullsA = compoundA ?? single(idA);
+      const hullsB = compoundB ?? single(idB);
+      if (hullsA && hullsB) {
+        for (const hullA of hullsA) {
+          for (const hullB of hullsB) {
+            const manifold = convexConvexManifold(
+              hullA,
+              a.position,
+              a.orientation,
+              hullB,
+              b.position,
+              b.orientation,
+            );
+            if (manifold) {
+              resolveContact(a, b, manifold, options);
+            }
+          }
+        }
+      }
+      continue;
+    }
+
     const shapeA = world.colliders.get(idA);
     const shapeB = world.colliders.get(idB);
     const manifold =

@@ -80,7 +80,7 @@ Run the demos in a browser (Vite dev server; engine packages resolve to source):
         correction), respecting `invMass`/`invInertia` (static = 0).
   - [x] `resolveCollisions(world)` system wired into `stepPhysics`, on by default
         with a per-world / per-body opt-out (`collides`).
-  - [ ] Optional approximate convex decomposition for concave meshes.
+  - [x] Optional approximate convex decomposition for concave meshes.
   - [ ] Verify `spinning-slices` (objects no longer phase through); profile and
         tune against the "hundreds of objects" goal.
 - [ ] Performance passes (allocation profiling, spatial tuning).

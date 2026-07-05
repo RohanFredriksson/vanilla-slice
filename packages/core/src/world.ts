@@ -12,7 +12,7 @@ import {
   alpha as stepperAlpha,
 } from '@vanilla-slice/physics';
 import type { FixedStepper } from '@vanilla-slice/physics';
-import { computeConvexHull } from '@vanilla-slice/geometry';
+import { computeConvexHull, approximateConvexDecomposition } from '@vanilla-slice/geometry';
 import type { SliceVolume } from '@vanilla-slice/slicing';
 import {
   stepPhysics,
@@ -52,6 +52,7 @@ function resolveConfig(config: WorldConfig): ResolvedConfig {
     collisions: config.collisions ?? true,
     restitution: config.restitution ?? 0,
     friction: config.friction ?? 0.5,
+    decomposeColliders: config.decomposeColliders ?? false,
   };
 }
 
@@ -67,6 +68,7 @@ export class World implements SimWorld {
   readonly renderables = new Map<EntityId, Renderable>();
   readonly metadata = new Map<EntityId, Metadata>();
   readonly colliders = new Map<EntityId, ConvexShape>();
+  readonly compoundColliders = new Map<EntityId, ConvexShape[]>();
   readonly nonCollidable = new Set<EntityId>();
   readonly spatial: SpatialHash;
 
@@ -108,12 +110,22 @@ export class World implements SimWorld {
     if (options.meshRef !== undefined) {
       this.renderables.set(id, { meshRef: options.meshRef, visible: true });
     }
-    // Collider: explicit override, else the convex hull of the geometry.
-    const collider =
-      options.collider ??
-      (options.geometry ? computeConvexHull(options.geometry) : undefined);
-    if (collider) {
-      this.colliders.set(id, collider);
+    // Collider: explicit override, else the convex hull of the geometry (or a
+    // compound of hulls when approximate convex decomposition is requested).
+    if (options.collider) {
+      this.colliders.set(id, options.collider);
+    } else if (options.geometry) {
+      const decompose = options.decompose ?? this.config.decomposeColliders;
+      if (decompose) {
+        const hulls = approximateConvexDecomposition(options.geometry);
+        if (hulls.length > 1) {
+          this.compoundColliders.set(id, hulls);
+        } else {
+          this.colliders.set(id, hulls[0] ?? computeConvexHull(options.geometry));
+        }
+      } else {
+        this.colliders.set(id, computeConvexHull(options.geometry));
+      }
     }
     if (options.collides === false) {
       this.nonCollidable.add(id);
@@ -137,6 +149,7 @@ export class World implements SimWorld {
     this.renderables.delete(id);
     this.metadata.delete(id);
     this.colliders.delete(id);
+    this.compoundColliders.delete(id);
     this.nonCollidable.delete(id);
     spatialRemove(this.spatial, id);
     return true;

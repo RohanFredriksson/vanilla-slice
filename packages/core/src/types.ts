@@ -53,6 +53,11 @@ export interface WorldConfig {
   restitution?: number;
   /** Default Coulomb friction coefficient for contacts. Defaults to 0.5. */
   friction?: number;
+  /**
+   * Approximate-convex-decompose colliders by default so concave meshes collide
+   * as compounds of convex hulls. Defaults to `false` (single hull per body).
+   */
+  decomposeColliders?: boolean;
 }
 
 /** Fully-resolved configuration with all defaults applied. */
@@ -67,6 +72,7 @@ export interface ResolvedConfig {
   collisions: boolean;
   restitution: number;
   friction: number;
+  decomposeColliders: boolean;
 }
 
 /** Options for spawning an entity. */
@@ -95,6 +101,12 @@ export interface SpawnOptions {
   collider?: ConvexShape;
   /** Set to `false` to exclude this body from collision. Defaults to `true`. */
   collides?: boolean;
+  /**
+   * Approximate-convex-decompose this body's `geometry` into a compound of
+   * convex hulls for accurate concave collision. Defaults to the world's
+   * `decomposeColliders`. Ignored when `collider` is given.
+   */
+  decompose?: boolean;
 }
 
 /** A snapshot of one renderable entity's transform for the render adapter. */
@@ -126,6 +138,8 @@ export interface SimWorld {
   readonly spatial: SpatialHash;
   /** Convex colliders keyed by entity, for body-vs-body collision. */
   readonly colliders: Map<EntityId, ConvexShape>;
+  /** Compound (multi-hull) colliders for decomposed concave bodies. */
+  readonly compoundColliders: Map<EntityId, ConvexShape[]>;
   /** Entities explicitly excluded from collision (`collides: false`). */
   readonly nonCollidable: Set<EntityId>;
   spawn(options: SpawnOptions): EntityId;

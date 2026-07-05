@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createBox, computeVolume } from '@vanilla-slice/geometry';
+import { createBox, createMesh, computeVolume } from '@vanilla-slice/geometry';
+import type { Mesh } from '@vanilla-slice/geometry';
 import { createWorld, World } from './world';
 
 describe('World lifecycle', () => {
@@ -166,5 +167,55 @@ describe('World collisions', () => {
     // Bodies phase through each other unchanged.
     expect(world.bodies.get(a)!.position[0]).toBeCloseTo(0, 6);
     expect(world.bodies.get(b)!.position[0]).toBeCloseTo(0.5, 6);
+  });
+});
+
+describe('World compound colliders (decomposition)', () => {
+  /** A single mesh of two unit boxes separated along x (concave, gap ≈ [0.5,3.5]). */
+  function twoSeparatedBoxes(): Mesh {
+    const near = createBox(1, 1, 1);
+    const far = createBox(1, 1, 1);
+    const farShifted = far.positions.map((v, i) => (i % 3 === 0 ? v + 4 : v));
+    const offset = near.positions.length / 3;
+    return createMesh(
+      [...near.positions, ...farShifted],
+      [...near.indices, ...far.indices.map((i) => i + offset)],
+    );
+  }
+
+  const moved = (p: readonly number[]): number =>
+    Math.hypot(p[0]! - 2, p[1]!, p[2]!);
+
+  it('lets a body pass through the gap of a decomposed concave body', () => {
+    const world = createWorld({ gravity: [0, 0, 0] });
+    const shell = world.spawn({
+      geometry: twoSeparatedBoxes(),
+      position: [0, 0, 0],
+      mass: 0,
+      decompose: true,
+    });
+    const probe = world.spawn({ geometry: createBox(1, 1, 1), position: [2, 0, 0] });
+    expect(world.compoundColliders.has(shell)).toBe(true);
+    for (let i = 0; i < 60; i++) {
+      world.update(1 / 60);
+    }
+    // Probe sits in the empty gap between the two hulls: untouched.
+    expect(moved(world.bodies.get(probe)!.position)).toBeCloseTo(0, 5);
+  });
+
+  it('pushes the same body out when the concave shell is a single hull', () => {
+    const world = createWorld({ gravity: [0, 0, 0] });
+    world.spawn({
+      geometry: twoSeparatedBoxes(),
+      position: [0, 0, 0],
+      mass: 0,
+      decompose: false, // single hull spans the gap
+    });
+    const probe = world.spawn({ geometry: createBox(1, 1, 1), position: [2, 0, 0] });
+    for (let i = 0; i < 60; i++) {
+      world.update(1 / 60);
+    }
+    // The filled hull ejects the probe from the gap.
+    expect(moved(world.bodies.get(probe)!.position)).toBeGreaterThan(0.1);
   });
 });
