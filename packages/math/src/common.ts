@@ -14,10 +14,12 @@ export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
+/** Convert `degrees` to radians. */
 export function toRadians(degrees: number): number {
   return degrees * DEG_TO_RAD;
 }
 
+/** Convert `radians` to degrees. */
 export function toDegrees(radians: number): number {
   return radians * RAD_TO_DEG;
 }
