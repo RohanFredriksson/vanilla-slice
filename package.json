@@ -1,9 +1,16 @@
 {
   "name": "vanilla-slice",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Vanilla Slice — framework-agnostic, renderer-agnostic TypeScript engine for physics, mesh slicing, geometry, and spatial queries.",
   "license": "MIT",
+  "author": "Rohan Fredriksson <rohan.fredriksson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RohanFredriksson/vanilla-slice.git"
+  },
+  "homepage": "https://github.com/RohanFredriksson/vanilla-slice#readme",
+  "bugs": "https://github.com/RohanFredriksson/vanilla-slice/issues",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -13,14 +20,21 @@
     "build": "nx run-many -t build",
     "test": "nx run-many -t test",
     "lint": "nx run-many -t lint",
+    "typecheck": "tsc --build",
     "graph": "nx graph",
     "affected:build": "nx affected -t build",
     "affected:test": "nx affected -t test",
-    "affected:lint": "nx affected -t lint"
+    "affected:lint": "nx affected -t lint",
+    "release": "nx release",
+    "release:version": "nx release version",
+    "release:changelog": "nx release changelog",
+    "release:publish": "nx release publish",
+    "release:dry-run": "nx release --dry-run"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@nx/eslint-plugin": "latest",
+    "@nx/js": "latest",
     "eslint": "^9.0.0",
     "jsonc-eslint-parser": "^2.4.0",
     "nx": "latest",

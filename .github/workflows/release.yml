@@ -1,0 +1,57 @@
+name: Release
+
+# Publishes a new release whenever releasable commits land on master.
+# The version is computed from Conventional Commit messages (fix -> patch,
+# feat -> minor, feat!/BREAKING CHANGE -> major). While the engine is 0.x,
+# treat breaking changes as `feat:` so the version stays pre-1.0 until you
+# deliberately cut 1.0.0.
+on:
+  push:
+    branches: [master]
+
+# Never run two releases at once, and never cancel an in-progress publish.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write # push the version commit + tag, create the GitHub Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Belt-and-suspenders: skip the workflow's own release commit. That commit
+    # also carries "[skip ci]", which GitHub already honors — this guards the
+    # rare case where that is stripped.
+    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify (lint, test, build)
+        run: npx nx run-many -t lint test build
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Release (version, changelog, tag, publish)
+        run: npx nx release --yes
+        env:
+          # Push the release commit/tag and create the GitHub Release.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Authenticate `npm publish` (set this repository secret).
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

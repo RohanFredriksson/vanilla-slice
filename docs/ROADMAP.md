@@ -81,7 +81,7 @@ Run the demos in a browser (Vite dev server; engine packages resolve to source):
   - [x] `resolveCollisions(world)` system wired into `stepPhysics`, on by default
         with a per-world / per-body opt-out (`collides`).
   - [x] Optional approximate convex decomposition for concave meshes.
-  - [ ] Verify `spinning-slices` (objects no longer phase through); profile and
+  - [x] Verify `spinning-slices` (objects no longer phase through); profile and
         tune against the "hundreds of objects" goal.
 - [ ] Performance passes (allocation profiling, spatial tuning).
   - [ ] DDA/voxel-walk broad-phase for `querySegment`: visit only the cells a
@@ -89,8 +89,25 @@ Run the demos in a browser (Vite dev server; engine packages resolve to source):
         bounding box (O(length / cellSize)). Would let long *bounded* slice
         cylinders prune spatially in dense scenes; unbounded cylinders currently
         sidestep the cost via `queryAll` (ADR 0004 amendment).
-- [ ] API stabilization and versioning.
-- [ ] npm publishing pipeline for packages.
+- [ ] API stabilization and versioning (ADR 0008).
+  - [x] Fixed/lockstep versioning at `0.1.0` across the eight engine packages.
+  - [x] Publishable manifests (`publishConfig`, `files`, `sideEffects`, `engines`,
+        metadata); apps stay private; `three` as a `renderer-three` peer.
+  - [x] `nx release` configured (fixed group, `preVersionCommand` build) + root
+        release scripts.
+  - [x] ADR 0008 recording the versioning/publishing strategy.
+  - [x] Add `repository`/`homepage`/`bugs`/`author` + `LICENSE` file (MIT,
+        Rohan Fredriksson); tarballs ship `dist` JS + types only.
+  - [ ] Optional per-package `README.md` for npm pages.
+  - [ ] Decide `1.0.0` criteria and cut it once the API has settled.
+- [ ] npm publishing pipeline for packages (CI + registry auth + provenance).
+  - [x] `Release` GitHub Actions workflow on push to `master`: Conventional
+        Commits drive the bump; `nx release` versions, changelogs, tags, creates
+        the GitHub Release, and publishes to npm (ADR 0008 amendment).
+  - [x] CI workflow trigger fixed (`main` → `master`).
+  - [ ] Add the `NPM_TOKEN` repository secret and bootstrap the first release
+        (`npx nx release 0.1.0 --first-release --yes`).
+  - [ ] npm publish provenance / supply-chain attestation.
 
 ## AI-DLC operating cadence
 - Break phases into small issues on the board:

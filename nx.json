@@ -58,5 +58,37 @@
       "cache": true
     }
   },
+  "release": {
+    "projects": [
+      "@vanilla-slice/math",
+      "@vanilla-slice/geometry",
+      "@vanilla-slice/physics",
+      "@vanilla-slice/spatial",
+      "@vanilla-slice/slicing",
+      "@vanilla-slice/core",
+      "@vanilla-slice/renderer-three",
+      "@vanilla-slice/runtime"
+    ],
+    "projectsRelationship": "fixed",
+    "releaseTag": {
+      "pattern": "v{version}"
+    },
+    "version": {
+      "conventionalCommits": true,
+      "fallbackCurrentVersionResolver": "disk",
+      "preVersionCommand": "npx nx run-many -t build"
+    },
+    "changelog": {
+      "workspaceChangelog": {
+        "createRelease": "github"
+      }
+    },
+    "git": {
+      "commit": true,
+      "tag": true,
+      "push": true,
+      "commitMessage": "chore(release): publish {version} [skip ci]"
+    }
+  },
   "analytics": false
 }
