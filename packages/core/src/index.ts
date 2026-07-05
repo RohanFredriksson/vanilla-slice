@@ -20,9 +20,15 @@ export {
   computeVolume,
   computeBounds,
 } from '@vanilla-slice/geometry';
-export type { SliceVolume, Fragment, Ray } from '@vanilla-slice/slicing';
+export type { SliceVolume, SliceRegion, Fragment, Ray } from '@vanilla-slice/slicing';
 export {
   createSliceVolume,
+  sliceVolume,
+  sphereRegion,
+  cylinderRegion,
+  boxRegion,
+  unboundedRegion,
+  regionContains,
   sliceVolumeFromSwipe,
   screenToNdc,
   rayFromNdc,

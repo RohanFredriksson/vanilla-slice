@@ -266,3 +266,8 @@ export function getPotentialPairs(hash: SpatialHash): Array<[EntityId, EntityId]
   }
   return pairs;
 }
+
+/** Every tracked entity id (used by unbounded queries). */
+export function queryAll(hash: SpatialHash): EntityId[] {
+  return [...hash.entityCells.keys()];
+}

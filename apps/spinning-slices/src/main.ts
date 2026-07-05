@@ -69,6 +69,9 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
     },
     playPlane,
     radius: 1.2,
+    // Cut objects at any depth along the swipe, not just those on the play plane,
+    // so collision-nudged pieces stay sliceable.
+    extendAlongView: true,
   });
 
   const toLocal = (event: PointerEvent): [number, number] => {

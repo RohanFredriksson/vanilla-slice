@@ -8,7 +8,7 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 ## Phase 0 — Context & Instructions (current)
 - [x] Capture design context (`AI_CONTEXT.md`).
 - [x] Author Copilot instructions (`.github/copilot-instructions.md`).
-- [ ] Review and approve golden rules and boundaries.
+- [x] Review and approve golden rules and boundaries.
 
 ## Phase 1 — Foundational Documentation
 - [x] `SPEC.md`
@@ -16,7 +16,7 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 - [x] `PRINCIPLES.md`
 - [x] `ROADMAP.md`
 - [x] ADRs 0001–0005
-- [ ] Stakeholder review and sign-off.
+- [x] Stakeholder review and sign-off.
 
 ## Phase 2 — Workspace Setup (Nx)
 - [x] Create Nx monorepo.
@@ -84,6 +84,11 @@ Run the demos in a browser (Vite dev server; engine packages resolve to source):
   - [ ] Verify `spinning-slices` (objects no longer phase through); profile and
         tune against the "hundreds of objects" goal.
 - [ ] Performance passes (allocation profiling, spatial tuning).
+  - [ ] DDA/voxel-walk broad-phase for `querySegment`: visit only the cells a
+        segment tube actually passes through instead of iterating its full
+        bounding box (O(length / cellSize)). Would let long *bounded* slice
+        cylinders prune spatially in dense scenes; unbounded cylinders currently
+        sidestep the cost via `queryAll` (ADR 0004 amendment).
 - [ ] API stabilization and versioning.
 - [ ] npm publishing pipeline for packages.
 

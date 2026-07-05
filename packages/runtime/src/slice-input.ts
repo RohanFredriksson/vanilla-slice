@@ -36,6 +36,12 @@ export interface SwipeSliceParams {
   /** The world plane the sliceable objects live on. */
   playPlane: Plane;
   radius?: number;
+  /**
+   * Extend the slice region into a cylinder along the view direction so objects
+   * at any depth along the swipe are sliceable (not just those near the play
+   * plane). Default `false`.
+   */
+  extendAlongView?: boolean;
 }
 
 /**
@@ -73,6 +79,7 @@ export function swipeToSliceVolume(params: SwipeSliceParams): SliceVolume | null
     worldEnd,
     params.viewDirection,
     params.radius,
+    { extendAlongView: params.extendAlongView ?? false },
   );
 }
 
@@ -87,6 +94,8 @@ export interface SwipeSlicerOptions {
   radius?: number;
   minDistance?: number;
   separationSpeed?: number;
+  /** Extend the slice region along the view direction (see {@link SwipeSliceParams}). */
+  extendAlongView?: boolean;
 }
 
 /**
@@ -124,6 +133,7 @@ export class SwipeSlicer {
       viewDirection: this.options.getViewDirection(),
       playPlane: this.options.playPlane,
       radius: this.options.radius,
+      extendAlongView: this.options.extendAlongView ?? false,
     });
     if (!volume) {
       return null;
