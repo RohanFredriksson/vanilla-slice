@@ -68,10 +68,9 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
       return [direction.x, direction.y, direction.z];
     },
     playPlane,
+    // Cut thickness perpendicular to the swipe; the cut spans the whole swipe
+    // (start -> end) by default, so a single stroke slices every cube in a row.
     radius: 1.2,
-    // Cut objects at any depth along the swipe, not just those on the play plane,
-    // so collision-nudged pieces stay sliceable.
-    extendAlongView: true,
   });
 
   const toLocal = (event: PointerEvent): [number, number] => {

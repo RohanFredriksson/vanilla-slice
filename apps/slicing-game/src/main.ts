@@ -64,7 +64,6 @@ export function startSlicingGame(canvas: HTMLCanvasElement): SlicingGameHandle {
       return [direction.x, direction.y, direction.z];
     },
     playPlane,
-    radius: 1.5,
   });
 
   const toLocal = (event: PointerEvent): [number, number] => {

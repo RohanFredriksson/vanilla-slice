@@ -85,3 +85,33 @@ the engine's data-oriented style). A deliberately omitted extension is an
 arbitrary-predicate/`custom` region — added only if a real application needs a
 shape outside this set (YAGNI).
 
+## Amendment — swipe-aligned capsule is the default swipe region (2026-07-05)
+
+The previous amendment left `sliceVolumeFromSwipe` defaulting to a **sphere**
+centered at the swipe midpoint with `radius = distance(start, end) / 2`. This
+conflated two independent quantities into one number: the *reach along the
+swipe* and the *perpendicular thickness* of the cut. Because a sphere's
+perpendicular reach is maximal at the midpoint and zero at the ends, objects
+sitting near the swipe endpoints landed on the region boundary and were
+intermittently dropped — a single stroke across a row of objects cut only the
+middle ones. Growing the radius to reach the ends also fattened the cut in
+every direction, so "cut exactly what the cursor crossed" was unreachable.
+
+Decision: `sliceVolumeFromSwipe` now defaults to a **capsule swept along the
+swipe axis** — a bounded `cylinder` with `axis = end - start`,
+`halfLength = distance(start, end) / 2`, centered at the swipe midpoint. This
+makes the along-swipe reach span `start -> end` by construction, so every
+object under the gesture is cut. The `radius` argument is **reinterpreted** as
+the *perpendicular* cut thickness (no longer the reach), defaulting to
+`distance(start, end) * 0.15` when omitted.
+
+This is a **breaking behavioral change** to `sliceVolumeFromSwipe` and to the
+meaning of `radius` in `SwipeSliceParams` / `SwipeSlicerOptions`. It is
+acceptable at the current `0.x` stage (ADR 0008). The `sphere` region and
+`createSliceVolume` are unchanged and remain available for callers that want a
+ball. `extendAlongView` still produces a view-aligned cylinder for cutting at
+any depth; its perpendicular `radius` now shares the same "thickness" default.
+The `spinning-slices` demo switched from `extendAlongView` to the default
+capsule, which fixes a single stroke only cutting 2–3 of a 5-cube row.
+
+

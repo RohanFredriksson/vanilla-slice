@@ -22,10 +22,33 @@ describe('slice volume', () => {
     // Horizontal swipe along X, camera looking down -Z => cut plane normal +Y.
     const volume = sliceVolumeFromSwipe([-1, 0, 0], [1, 0, 0], [0, 0, -1]);
     expect(Math.abs(volume.plane.normal[1])).toBeCloseTo(1, 10);
-    expect(volume.region.kind).toBe('sphere');
-    expect(volume.region).toMatchObject({ center: [0, 0, 0], radius: 1 });
+    // Default region is a capsule swept along the swipe axis (start -> end).
+    expect(volume.region.kind).toBe('cylinder');
+    if (volume.region.kind === 'cylinder') {
+      expect(volume.region.center).toEqual([0, 0, 0]);
+      expect(volume.region.axis).toEqual([1, 0, 0]);
+      expect(volume.region.halfLength).toBeCloseTo(1, 10);
+      // radius defaults to swipeLength * 0.15 = 2 * 0.15.
+      expect(volume.region.radius).toBeCloseTo(0.3, 10);
+    }
     // A point on the swipe line lies on the plane.
     expect(signedDistanceToPoint(volume.plane, [1, 0, 0])).toBeCloseTo(0, 10);
+  });
+
+  it('spans every object along the swipe from start to end', () => {
+    // A long swipe across a row of objects: all on-axis objects are cut, even
+    // those at the swipe endpoints (a sphere region used to drop the ends).
+    const volume = sliceVolumeFromSwipe([-4, 0, 0], [4, 0, 0], [0, 0, -1], 0.5);
+    const row = [-4, -2, 0, 2, 4].map((x, i) => ({
+      id: i + 1,
+      center: [x, 0, 0] as [number, number, number],
+      radius: 0.5,
+    }));
+    expect(filterSliceCandidates(volume, row)).toEqual([1, 2, 3, 4, 5]);
+    // An object off the swipe axis (beyond the perpendicular thickness) is not.
+    expect(filterSliceCandidates(volume, [{ id: 9, center: [0, 3, 0], radius: 0.5 }])).toEqual(
+      [],
+    );
   });
 
   it('builds a view-aligned cylinder region when requested', () => {

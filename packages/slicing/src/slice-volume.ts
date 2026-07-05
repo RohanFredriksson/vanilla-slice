@@ -109,7 +109,8 @@ export function sliceVolume(plane: Plane, region: SliceRegion): SliceVolume {
 export interface SwipeVolumeOptions {
   /**
    * Extend the region into a cylinder along the view direction so objects at
-   * any depth along the swipe are sliceable. Default `false` (sphere region).
+   * any depth along the swipe are sliceable, instead of a capsule bounded to
+   * the swipe segment. Default `false` (swipe-aligned capsule).
    */
   extendAlongView?: boolean;
   /** Optional half-length bounding the cylinder along the view axis. */
@@ -119,9 +120,16 @@ export interface SwipeVolumeOptions {
 /**
  * Build a slice volume from a world-space swipe (`start` -> `end`) and the
  * camera `viewDirection`. The cutting plane is spanned by the swipe and view
- * directions; its normal is perpendicular to both. The bounded region is
- * centered at the swipe midpoint — a sphere by default, or a view-aligned
- * cylinder when `options.extendAlongView` is set.
+ * directions; its normal is perpendicular to both.
+ *
+ * By default the bounded region is a **capsule swept along the swipe axis**
+ * (a cylinder of half-length `distance(start, end) / 2` centered at the swipe
+ * midpoint), so every object under the gesture from `start` to `end` is cut.
+ * `radius` is the *perpendicular* cut thickness — not the reach along the
+ * swipe — and defaults to `distance(start, end) * 0.15` when omitted.
+ *
+ * When `options.extendAlongView` is set the region is instead a cylinder along
+ * the view direction, for cutting objects at any depth along the camera ray.
  */
 export function sliceVolumeFromSwipe(
   start: ReadonlyVec3,
@@ -142,10 +150,11 @@ export function sliceVolumeFromSwipe(
   const center: Vec3T = [0, 0, 0];
   Vec3.lerp(center, start, end, 0.5);
 
-  const bounded = radius ?? Vec3.distance(start, end) * 0.5;
+  const swipeLength = Vec3.distance(start, end);
+  const thickness = radius ?? swipeLength * 0.15;
   const region = options.extendAlongView
-    ? cylinderRegion(center, viewDirection, bounded, options.halfLength)
-    : sphereRegion(center, bounded);
+    ? cylinderRegion(center, viewDirection, thickness, options.halfLength)
+    : cylinderRegion(center, swipe, thickness, swipeLength / 2);
   return { plane, region };
 }
 

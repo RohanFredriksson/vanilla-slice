@@ -35,6 +35,11 @@ export interface SwipeSliceParams {
   viewDirection: Vec3T;
   /** The world plane the sliceable objects live on. */
   playPlane: Plane;
+  /**
+   * Perpendicular cut thickness in world units (not the reach along the swipe,
+   * which spans `start`->`end` by default). Defaults to a fraction of the swipe
+   * length — see {@link swipeToSliceVolume}'s underlying `sliceVolumeFromSwipe`.
+   */
   radius?: number;
   /**
    * Extend the slice region into a cylinder along the view direction so objects
@@ -91,6 +96,7 @@ export interface SwipeSlicerOptions {
   getInverseViewProjection: () => ReadonlyMat4;
   getViewDirection: () => Vec3T;
   playPlane: Plane;
+  /** Perpendicular cut thickness (see {@link SwipeSliceParams.radius}). */
   radius?: number;
   minDistance?: number;
   separationSpeed?: number;
