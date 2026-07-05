@@ -27,7 +27,7 @@ gates the next. Implementation does not begin until Phase 2 is approved.
 - [x] Configure build caching, testing, and CI.
 
 ## Phase 3 — Core Engine (framework-free)
-- [ ] `math`: vectors, matrices, quaternions.
+- [x] `math`: vectors, matrices, quaternions.
 - [ ] `geometry`: mesh representation, plane intersection, mesh splitting, caps.
 - [ ] `physics`: fixed-timestep integration, rigid bodies, gravity, cleanup.
 - [ ] `spatial`: broad-phase structure and region/neighbor queries.
