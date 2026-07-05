@@ -1,4 +1,9 @@
-// @slice/geometry — placeholder module.
-// Implementation (mesh representation, plane intersection, mesh splitting, caps)
-// begins in a later roadmap phase. Depends only on @slice/math.
+// @slice/geometry — mesh representation, plane intersection, and mesh splitting.
+// Depends only on @slice/math (see ARCHITECTURE.md).
+
+export * from './mesh';
+export * from './plane';
+export * from './primitives';
+export * from './split';
+
 export const GEOMETRY_PACKAGE = '@slice/geometry';
