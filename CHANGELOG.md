@@ -1,3 +1,18 @@
+## 0.1.5 (2026-07-06)
+
+### 🚀 Features
+
+- fracture engine ([e858927](https://github.com/RohanFredriksson/vanilla-slice/commit/e858927))
+
+### 🩹 Fixes
+
+- optimisations on fracture engine ([497daa8](https://github.com/RohanFredriksson/vanilla-slice/commit/497daa8))
+- for failing build ([ae7952d](https://github.com/RohanFredriksson/vanilla-slice/commit/ae7952d))
+
+### ❤️ Thank You
+
+- Rohan Fredriksson
+
 ## 0.1.4 (2026-07-05)
 
 ### 🚀 Features
