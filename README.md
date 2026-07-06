@@ -5,8 +5,8 @@
 ![Built with Nx](https://img.shields.io/badge/built%20with-Nx-143055.svg)
 
 A reusable, **framework-agnostic** and **renderer-agnostic** TypeScript engine for
-real-time **physics**, **mesh slicing** (Fruit Ninja–style), **geometry
-processing**, and **spatial queries**.
+real-time **physics**, **mesh slicing** (Fruit Ninja–style), **material-driven
+fracturing**, **geometry processing**, and **spatial queries**.
 
 Vanilla Slice is **not a game** — it's the engine underneath one. Games, demos,
 and other apps are *consumers* of the engine.
@@ -41,6 +41,16 @@ world.update(1 / 60);
 - **Bounded mesh slicing** — a slice is a *bounded interaction volume*, never an
   infinite plane. Pluggable regions: **sphere**, **cylinder**, **box**, or
   **unbounded**. Produces closed fragments with separation impulses.
+- **Data-driven materials** — a `Material` (density, friction, restitution,
+  toughness, brittleness, fracture propagation) referenced by a `MaterialRef`
+  component. Behaviour follows from the data — "fruit slices, glass fractures,
+  steel resists" — never from object-type branching.
+- **Interaction framework** — slice, fracture, and impact are stateless
+  **processors** dispatched by one `InteractionSystem` over a per-step event
+  queue; new interactions are added as processors, not new top-level systems.
+- **Real-time fracture** — Voronoi fragment generation (deterministic and
+  neighbour-limited), collision- and slice-driven and gated by material
+  thresholds. Produces closed convex fragments with radial impulses.
 - **Spatial broad-phase** — a uniform spatial hash for region/neighbour/pair
   queries; avoids O(n²) scans.
 - **Zero-dependency math** — vectors, matrices, and quaternions.
@@ -59,8 +69,17 @@ flowchart LR
   math --> spatial
   geometry --> slicing
   spatial --> slicing
+  geometry --> fracture
+  spatial --> fracture
+  materials --> interactions
+  physics --> interactions
+  geometry --> interactions
+  spatial --> interactions
   physics --> core
   slicing --> core
+  fracture --> core
+  interactions --> core
+  materials --> core
   spatial --> core
   geometry --> core
   core --> renderer["renderer-three<br/>(adapter)"]
@@ -72,7 +91,8 @@ flowchart LR
 ### Golden rules
 
 1. No framework (Angular/React/…) in the core.
-2. No Three.js in `physics`/`geometry`/`slicing`/`spatial`/`math`/`core`.
+2. No Three.js in the core (`math`, `materials`, `geometry`, `physics`,
+   `spatial`, `slicing`, `fracture`, `interactions`, `core`).
 3. No DOM or browser APIs in the engine — it must run headless.
 4. No circular dependencies between packages.
 5. Rendering is an adapter; it reads engine state, never owns simulation state.
@@ -83,10 +103,13 @@ flowchart LR
 | Package | Description | Depends on |
 | --- | --- | --- |
 | [`@vanilla-slice/math`](packages/math) | Vectors, matrices, quaternions. | — |
+| [`@vanilla-slice/materials`](packages/materials) | Data-driven physical material properties (density, toughness, brittleness, …). | — |
 | [`@vanilla-slice/geometry`](packages/geometry) | Mesh representation, plane intersection, convex hulls, mesh splitting, convex decomposition. | `math` |
 | [`@vanilla-slice/physics`](packages/physics) | Rigid bodies, integration, collisions (GJK/EPA), impulse solver. | `math` |
 | [`@vanilla-slice/spatial`](packages/spatial) | Spatial hash / broad-phase queries. | `math` |
 | [`@vanilla-slice/slicing`](packages/slicing) | Bounded slice volumes, candidate filtering, fragment generation. | `geometry`, `spatial`, `math` |
+| [`@vanilla-slice/fracture`](packages/fracture) | Voronoi fracture fragment generation (sibling of slicing). | `geometry` |
+| [`@vanilla-slice/interactions`](packages/interactions) | Interaction framework: types, processor registry, per-step event queue. | `materials`, `physics`, `geometry`, `spatial`, `math` |
 | [`@vanilla-slice/core`](packages/core) | ECS world orchestrating the above — the main entry point. | core packages |
 | [`@vanilla-slice/renderer-three`](packages/renderer-three) | Three.js rendering adapter + raycasting. | `core`, `math`, `three` (peer) |
 | [`@vanilla-slice/runtime`](packages/runtime) | Framework-agnostic engine loop + swipe-to-slice input. | `core`, `math` |
@@ -149,6 +172,36 @@ const volume = sliceVolume(plane, cylinderRegion([0, 0, 0], [0, 0, 1], 1.5));
 const { removed, created } = world.slice(volume);
 ```
 
+### Materials & fracture
+
+Behaviour is **data-driven**: a `Material` decides how an object responds. Attach
+one by id and the engine derives mass from density, and fractures (or resists) on
+hard collisions based on `toughness`/`brittleness` — no object-type branching.
+
+```ts
+import { createWorld, createBox, defineMaterial } from '@vanilla-slice/core';
+
+const world = createWorld({
+  gravity: [0, 0, 0],
+  materials: [
+    defineMaterial('glass', { density: 2.5, toughness: 10, brittleness: 0.85 }),
+    defineMaterial('steel', { toughness: 1e6 }), // effectively unbreakable
+  ],
+});
+
+// Glass shatters into Voronoi fragments when it hits hard enough…
+world.spawn({ geometry: createBox(1, 1, 1), material: 'glass', velocity: [8, 0, 0] });
+// …against an immovable, non-sliceable steel wall that resists.
+world.spawn({
+  geometry: createBox(0.6, 3, 3),
+  material: 'steel',
+  mass: 0,
+  sliceable: false,
+});
+
+world.update(1 / 60); // a hard-enough impact fractures the glass, purely from data
+```
+
 ### With Three.js + the runtime loop
 
 ```ts
@@ -185,6 +238,11 @@ app (they own their own imperative loop):
 npx nx serve @vanilla-slice/slicing-game     # http://localhost:5173
 npx nx serve @vanilla-slice/spinning-slices  # http://localhost:5174
 ```
+
+- **slicing-game** — a Fruit Ninja–style swipe-to-slice game.
+- **spinning-slices** — a slicing showcase that also demonstrates
+  **collision-driven fracture**: glass cubes shatter against an immovable steel
+  slab, driven entirely by material data.
 
 Production bundles:
 
