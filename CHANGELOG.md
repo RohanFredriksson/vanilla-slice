@@ -1,3 +1,13 @@
+## 0.1.4 (2026-07-05)
+
+### 🚀 Features
+
+- made slicing more intuitive ([68e1515](https://github.com/RohanFredriksson/vanilla-slice/commit/68e1515))
+
+### ❤️ Thank You
+
+- Rohan Fredriksson
+
 ## 0.1.3 (2026-07-05)
 
 ### 🩹 Fixes

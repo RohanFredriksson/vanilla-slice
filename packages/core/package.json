@@ -1,6 +1,6 @@
 {
   "name": "@vanilla-slice/core",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Framework-agnostic ECS world orchestrating physics, slicing, spatial, and geometry — the main entry point to the Vanilla Slice engine.",
   "keywords": [
     "vanilla-slice",

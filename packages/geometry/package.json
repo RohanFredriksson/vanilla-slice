@@ -1,6 +1,6 @@
 {
   "name": "@vanilla-slice/geometry",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Mesh representation, plane intersection, convex hulls, and mesh splitting for the Vanilla Slice engine.",
   "keywords": [
     "vanilla-slice",
