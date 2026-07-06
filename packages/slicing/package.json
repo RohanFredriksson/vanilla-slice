@@ -1,6 +1,6 @@
 {
   "name": "@vanilla-slice/slicing",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Bounded slice volumes, candidate filtering, and fragment generation for the Vanilla Slice engine.",
   "keywords": [
     "vanilla-slice",

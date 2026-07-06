@@ -1,6 +1,6 @@
 {
   "name": "@vanilla-slice/materials",
-  "version": "0.1.3",
+  "version": "0.1.6",
   "description": "Data-driven physical material properties (density, friction, toughness, brittleness) for the Vanilla Slice engine.",
   "keywords": [
     "vanilla-slice",

@@ -1,3 +1,13 @@
+## 0.1.6 (2026-07-06)
+
+### 🩹 Fixes
+
+- for failing build ([072b0e4](https://github.com/RohanFredriksson/vanilla-slice/commit/072b0e4))
+
+### ❤️ Thank You
+
+- Rohan Fredriksson
+
 ## 0.1.5 (2026-07-06)
 
 ### 🚀 Features
