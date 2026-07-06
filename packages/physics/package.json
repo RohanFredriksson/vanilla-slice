@@ -1,6 +1,6 @@
 {
   "name": "@vanilla-slice/physics",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Headless rigid-body physics: fixed-timestep integration, GJK/EPA collisions, and impulse solving for the Vanilla Slice engine.",
   "keywords": [
     "vanilla-slice",
