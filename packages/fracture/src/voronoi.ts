@@ -8,7 +8,7 @@ import {
   hullFromConvexMesh,
   translateHull,
 } from '@vanilla-slice/geometry';
-import type { Mesh, Plane } from '@vanilla-slice/geometry';
+import type { Mesh, Plane, SplitOptions } from '@vanilla-slice/geometry';
 import { createRng } from './rng';
 import type { FractureFragment, FractureOptions, Vec3T } from './types';
 
@@ -145,6 +145,9 @@ export function fractureMesh(
   }
   const cap = options.cap ?? true;
   const separationSpeed = options.separationSpeed ?? 1;
+  const splitOptions: SplitOptions = options.capToMaterialSpace
+    ? { cap, capToMaterialSpace: options.capToMaterialSpace }
+    : { cap };
   const fragments: FractureFragment[] = [];
 
   // Reused per cell: other seeds ordered by distance to the current seed.
@@ -183,7 +186,7 @@ export function fractureMesh(
       }
       // Normal points toward the other seed, so the half-space nearer seed i is
       // `back`.
-      cell = splitMeshByPlane(cell, plane, { cap }).back;
+      cell = splitMeshByPlane(cell, plane, splitOptions).back;
       if (cell) {
         radius = maxVertexDistance(cell, si);
       }

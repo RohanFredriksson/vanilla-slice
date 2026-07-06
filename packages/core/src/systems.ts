@@ -230,12 +230,14 @@ export function getRenderState(world: SimWorld): RenderItem[] {
     if (!body) {
       continue;
     }
+    const materialId = world.materialRefs.get(id)?.materialId;
     items.push({
       id,
       meshRef: renderable.meshRef,
       position: Vec3.clone(body.position),
       orientation: Quat.clone(body.orientation),
       visible: renderable.visible,
+      ...(materialId !== undefined ? { materialId } : {}),
     });
   }
   return items;

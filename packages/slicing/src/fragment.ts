@@ -1,4 +1,5 @@
 import { Vec3 } from '@vanilla-slice/math';
+import type { ReadonlyMat4 } from '@vanilla-slice/math';
 import {
   splitMeshByPlane,
   vertexCount,
@@ -36,6 +37,14 @@ export interface SliceMeshOptions {
   separationSpeed?: number;
   /** Cap the exposed cross-section so pieces stay closed solids (default true). */
   cap?: boolean;
+  /**
+   * Maps a world-space cap point into the source model's rest-pose (`tex3`)
+   * space — typically the sliced body's inverse model matrix. Forwarded to the
+   * split so the cut surface receives material-space coordinates for
+   * solid/triplanar texturing (ADR 0010). Only used when the mesh carries
+   * `tex3`.
+   */
+  capToMaterialSpace?: ReadonlyMat4;
 }
 
 /** Average vertex position of a mesh. */
@@ -73,7 +82,12 @@ export function sliceMesh(
   const separationSpeed = options.separationSpeed ?? 1;
   const cap = options.cap ?? true;
 
-  const { front, back } = splitMeshByPlane(worldMesh, volume.plane, { cap });
+  const { front, back } = splitMeshByPlane(worldMesh, volume.plane, {
+    cap,
+    ...(options.capToMaterialSpace
+      ? { capToMaterialSpace: options.capToMaterialSpace }
+      : {}),
+  });
   const normal = volume.plane.normal;
   const fragments: Fragment[] = [];
 

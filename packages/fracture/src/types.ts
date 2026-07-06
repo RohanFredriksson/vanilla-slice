@@ -1,4 +1,5 @@
 import type { Mesh, ConvexHull } from '@vanilla-slice/geometry';
+import type { ReadonlyMat4 } from '@vanilla-slice/math';
 
 /** Mutable 3-component vector (matches `@vanilla-slice/math`'s `Vec3`). */
 export type Vec3T = [number, number, number];
@@ -59,4 +60,12 @@ export interface FractureOptions {
   separationSpeed?: number;
   /** Cap cut cross-sections so fragments are closed solids (default `true`). */
   cap?: boolean;
+  /**
+   * Maps a world-space cap point into the source model's rest-pose (`tex3`)
+   * space — typically the fractured body's inverse model matrix. Forwarded to
+   * the split so interior (cell) faces receive material-space coordinates for
+   * solid/triplanar texturing (ADR 0010). Only used when the mesh carries
+   * `tex3`.
+   */
+  capToMaterialSpace?: ReadonlyMat4;
 }

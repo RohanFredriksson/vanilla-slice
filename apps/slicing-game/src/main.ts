@@ -2,8 +2,13 @@
 // The imperative animation loop is owned here (via @vanilla-slice/runtime's EngineLoop)
 // and runs independent of any framework change detection (ADR 0005).
 
-import { createWorld, createBox, createPlane, fromNormalAndPoint } from '@vanilla-slice/core';
-import { ThreeRenderer, inverseViewProjection } from '@vanilla-slice/renderer-three';
+import { createWorld, createBox, createPlane, fromNormalAndPoint, defineMaterial } from '@vanilla-slice/core';
+import type { Mesh } from '@vanilla-slice/core';
+import {
+  ThreeRenderer,
+  inverseViewProjection,
+  InteriorAppearanceRegistry,
+} from '@vanilla-slice/renderer-three';
 import { EngineLoop, SwipeSlicer } from '@vanilla-slice/runtime';
 import {
   WebGLRenderer,
@@ -23,6 +28,19 @@ export interface SlicingGameHandle {
 }
 
 /**
+ * A box carrying UVs and a rest-pose `tex3` (its local positions), so cut faces
+ * can be textured as a solid material interior (ADR 0010).
+ */
+function texturedBox(size = 1): Mesh {
+  const box = createBox(size, size, size);
+  const uvs: number[] = [];
+  for (let i = 0; i < box.positions.length; i += 3) {
+    uvs.push(box.positions[i]! / size + 0.5, box.positions[i + 1]! / size + 0.5);
+  }
+  return { ...box, uvs, tex3: box.positions.slice() };
+}
+
+/**
  * Start the fruit-slicing game on a canvas. Fruits are launched upward on an
  * interval; a pointer swipe slices any fruit within the bounded slice volume.
  */
@@ -30,6 +48,16 @@ export function startSlicingGame(canvas: HTMLCanvasElement): SlicingGameHandle {
   const world = createWorld({
     gravity: [0, -9.81, 0],
     bounds: { min: [-20, -20, -20], max: [20, 20, 20] },
+    materials: [
+      // Watermelon: cuts cleanly; its interior renders as solid red flesh.
+      defineMaterial('watermelon', {
+        density: 0.9,
+        toughness: 1e6,
+        brittleness: 0.2,
+        restitution: 0.1,
+        friction: 0.6,
+      }),
+    ],
   });
 
   const webgl = new WebGLRenderer({ canvas, antialias: true });
@@ -45,10 +73,21 @@ export function startSlicingGame(canvas: HTMLCanvasElement): SlicingGameHandle {
   camera.position.set(0, 0, 10);
   camera.lookAt(0, 0, 0);
 
+  // Solid watermelon-flesh interior for cut faces, keyed by material id.
+  const interior = new InteriorAppearanceRegistry().registerPreset('watermelon', {
+    pattern: 'flesh',
+    colorA: 0xe23b52,
+    colorB: 0xffb3ad,
+    frequency: 1.4,
+  });
+
   const renderer = new ThreeRenderer({
     scene,
-    createMaterial: () =>
-      new MeshStandardMaterial({ color: pickColor(), roughness: 0.5 }),
+    interior,
+    createMaterial: (item) =>
+      item.meshRef === 'watermelon'
+        ? new MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.6 })
+        : new MeshStandardMaterial({ color: pickColor(), roughness: 0.5 }),
   });
 
   const playPlane = fromNormalAndPoint(createPlane(), [0, 0, 1], [0, 0, 0]);
@@ -101,8 +140,9 @@ export function startSlicingGame(canvas: HTMLCanvasElement): SlicingGameHandle {
   const spawnFruit = (): void => {
     const x = (Math.random() * 2 - 1) * 3;
     world.spawn({
-      geometry: createBox(1, 1, 1),
-      meshRef: 'fruit',
+      geometry: texturedBox(1),
+      meshRef: 'watermelon',
+      material: 'watermelon',
       position: [x, -6, 0],
       velocity: [-x * 0.5, 9 + Math.random() * 2, 0],
       angularVelocity: [Math.random(), Math.random(), Math.random()],
@@ -131,6 +171,7 @@ export function startSlicingGame(canvas: HTMLCanvasElement): SlicingGameHandle {
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp);
       renderer.clear();
+      interior.dispose();
       webgl.dispose();
     },
   };

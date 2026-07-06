@@ -1,8 +1,10 @@
-import { Vec3 } from '@vanilla-slice/math';
+import { Vec2, Vec3 } from '@vanilla-slice/math';
 import type { ReadonlyMat4 } from '@vanilla-slice/math';
 
 /** Mutable 3-component vector (matches `@vanilla-slice/math`'s `Vec3`). */
 type Vec3T = ReturnType<typeof Vec3.create>;
+/** Mutable 2-component vector (matches `@vanilla-slice/math`'s `Vec2`). */
+type Vec2T = ReturnType<typeof Vec2.create>;
 
 /**
  * A triangle mesh stored as flat, non-interleaved arrays.
@@ -13,10 +15,32 @@ type Vec3T = ReturnType<typeof Vec3.create>;
  * Normals are not stored; they are derived on demand via
  * {@link computeVertexNormals}. This keeps the representation minimal and lets
  * slicing operate purely on positions.
+ *
+ * The optional attribute channels support textured cutting and fracture
+ * (ADR 0010). They are absent by default, so the positions-only path is
+ * unchanged. When present they run parallel to `positions`:
+ *
+ * - `uvs` — 2 per vertex, the source model's texture coordinates.
+ * - `tex3` — 3 per vertex, a rest-pose (model-space) coordinate that drives
+ *   solid/triplanar texturing of newly-exposed interior surfaces; it is
+ *   invariant under the rigid transforms applied while cutting, so interior
+ *   textures stay welded to the material as fragments move.
+ * - `groups` — 1 per *triangle* (length `indices.length / 3`): the material
+ *   slot a face belongs to (`0` = exterior skin, `1` = interior/cut surface).
  */
 export interface Mesh {
   positions: number[];
   indices: number[];
+  uvs?: number[];
+  tex3?: number[];
+  groups?: number[];
+}
+
+/** Optional attribute channels attachable to a {@link Mesh}. */
+export interface MeshAttributes {
+  uvs?: number[];
+  tex3?: number[];
+  groups?: number[];
 }
 
 /** Axis-aligned bounding box. */
@@ -25,9 +49,20 @@ export interface Bounds {
   max: Vec3T;
 }
 
-/** Create a mesh from raw position/index arrays (references, not copies). */
-export function createMesh(positions: number[] = [], indices: number[] = []): Mesh {
-  return { positions, indices };
+/**
+ * Create a mesh from raw position/index arrays (references, not copies).
+ * Optional attribute channels are attached only when provided (ADR 0010).
+ */
+export function createMesh(
+  positions: number[] = [],
+  indices: number[] = [],
+  attributes: MeshAttributes = {},
+): Mesh {
+  const mesh: Mesh = { positions, indices };
+  if (attributes.uvs) mesh.uvs = attributes.uvs;
+  if (attributes.tex3) mesh.tex3 = attributes.tex3;
+  if (attributes.groups) mesh.groups = attributes.groups;
+  return mesh;
 }
 
 /** Number of vertices in the mesh. */
@@ -49,9 +84,38 @@ export function getVertex(mesh: Mesh, index: number, out: Vec3T): Vec3T {
   return out;
 }
 
-/** Deep-copy a mesh. */
+/** Read the UV of vertex `index` into `out`. Returns `[0, 0]` when absent. */
+export function getUv(mesh: Mesh, index: number, out: Vec2T): Vec2T {
+  const uvs = mesh.uvs;
+  const base = index * 2;
+  out[0] = uvs?.[base] ?? 0;
+  out[1] = uvs?.[base + 1] ?? 0;
+  return out;
+}
+
+/**
+ * Read the rest-pose (model-space) coordinate of vertex `index` into `out`.
+ * Returns `[0, 0, 0]` when absent.
+ */
+export function getTex3(mesh: Mesh, index: number, out: Vec3T): Vec3T {
+  const tex3 = mesh.tex3;
+  const base = index * 3;
+  out[0] = tex3?.[base] ?? 0;
+  out[1] = tex3?.[base + 1] ?? 0;
+  out[2] = tex3?.[base + 2] ?? 0;
+  return out;
+}
+
+/** Deep-copy a mesh, including any optional attribute channels. */
 export function cloneMesh(mesh: Mesh): Mesh {
-  return { positions: mesh.positions.slice(), indices: mesh.indices.slice() };
+  const clone: Mesh = {
+    positions: mesh.positions.slice(),
+    indices: mesh.indices.slice(),
+  };
+  if (mesh.uvs) clone.uvs = mesh.uvs.slice();
+  if (mesh.tex3) clone.tex3 = mesh.tex3.slice();
+  if (mesh.groups) clone.groups = mesh.groups.slice();
+  return clone;
 }
 
 /** Whether the mesh has no triangles. */

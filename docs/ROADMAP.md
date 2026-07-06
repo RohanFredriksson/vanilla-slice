@@ -1,6 +1,7 @@
 # Vanilla Slice — Roadmap (ROADMAP.md)
 
-Status: Living · Phases 0–10 implemented; Phase 7 hardening and follow-ups ongoing.
+Status: Living · Phases 0–11 implemented; Phase 7 hardening and follow-ups
+ongoing. Phase 11 (textured cut & fracture surfaces, ADR 0010) complete.
 
 The roadmap sequences work from documentation through a working demo. Each phase
 gates the next.
@@ -254,6 +255,51 @@ compromise instant shattering, detail, or determinism for a rare worst case):
 - [ ] **Sustained-scaling follow-up (separate from the jank).** `syncSpatial`
       re-`insert`s every body every frame; skip static/sleeping bodies. Pairs
       with the deferred DDA broad-phase (Phase 7).
+
+## Phase 11 — Textured Cut & Fracture Surfaces (ADR 0010, proposed)
+
+Textured (UV-mapped) models cut and fracture correctly, and the newly-exposed
+interior renders as a believable, material-specific surface (wood grain with
+rings/streaks by cut direction, marble, fruit flesh, …), consistent across
+fragments. **Depends on Phases 8–10.** Engine gains only neutral data; all
+appearance lives in the renderer, keyed by material id (ADR 0010).
+
+- [x] **P1 — Mesh attribute channels (`geometry`).** Add optional `uvs` (2/vtx),
+      `tex3` (3/vtx, rest-pose/model-space coordinate), and `groups` (per-triangle
+      slot: 0 = exterior skin, 1 = interior). Carry through `cloneMesh` /
+      `transformMesh` and core `recenterMesh` / `toWorldMesh`; add `getUv`/`getTex3`
+      accessors. Behaviour-neutral (channels absent by default).
+- [x] **P2 — Attribute-aware split (`geometry`, fixes slice + fracture).**
+      `MeshBuilder` stores channels; interpolate `uv`/`tex3` at the existing clip
+      parameter `s`; emit source polys as group 0; fall back to positions-only when
+      no attributes. Fracture inherits this via shared `splitMeshByPlane`.
+- [x] **P3 — Interior geometry: cap coords (`geometry`).** Cap triangles as group
+      1; cap `tex3` = world cap point × inverse model matrix (new
+      `SplitOptions.capToMaterialSpace`); planar `uv` from the cap's in-plane basis
+      as a 2D fallback.
+- [x] **P4 — Core plumbing.** Pass each body's inverse model matrix into
+      slice/fracture (`slice-system`, `fracture-system`; `voronoi` forwards
+      options); `recenterMesh` keeps channels; surface the entity's `materialId` on
+      `RenderItem` so the renderer can resolve an interior appearance.
+- [x] **P5 — Renderer interiors (`renderer-three`).** Upload `uv`/`tex3`; coalesce
+      `groups` into `geometry.addGroup`; material **array** per entity (slot 0
+      exterior via existing `createMaterial`, slot 1 interior from a new
+      `InteriorAppearanceRegistry` keyed by `materialId`); interior = triplanar /
+      solid shaders sampling `tex3` with presets (procedural wood rings+streaks,
+      marble, stone, fruit flesh).
+- [x] **P6 — Normal mapping & tangents (two paths).** Exterior (has uv): renderer
+      `geometry.computeTangents()` + slot-0 `normalMap`; no engine tangent channel.
+      Interior (triplanar/solid): triplanar normal mapping with in-shader TBN from
+      `tex3` — no per-vertex tangents; correct relief for cross-cut vs rip-cut,
+      stable across fragments.
+- [x] **P7 — Tests & demos.** Geometry seam UV/tex3 interpolation + cap group/tex3;
+      fracture `tex3` continuity across adjacent cells (reassembly); renderer
+      attribute + group upload; exterior tangent attribute present when uv exists;
+      interior solid shader compiles + perturbs normals (validated in-browser on
+      WebGL). Demos: a wood block in `spinning-slices` (concentric rings on the
+      cut) and a watermelon in `slicing-game` (green rind → red flesh).
+- [ ] Defer: non-convex cap cross-sections (unchanged assumption); per-face
+      material assignment beyond the two-slot exterior/interior split.
 
 ## AI-DLC operating cadence
 - Break phases into small issues on the board:

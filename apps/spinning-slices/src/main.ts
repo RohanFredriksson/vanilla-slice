@@ -3,7 +3,12 @@
 // swipe cuts them. The imperative loop is owned here (ADR 0005).
 
 import { createWorld, createBox, createPlane, fromNormalAndPoint, defineMaterial } from '@vanilla-slice/core';
-import { ThreeRenderer, inverseViewProjection } from '@vanilla-slice/renderer-three';
+import type { Mesh } from '@vanilla-slice/core';
+import {
+  ThreeRenderer,
+  inverseViewProjection,
+  InteriorAppearanceRegistry,
+} from '@vanilla-slice/renderer-three';
 import { EngineLoop, SwipeSlicer } from '@vanilla-slice/runtime';
 import {
   WebGLRenderer,
@@ -18,6 +23,19 @@ import {
 /** A running spinning-slices showcase that can be stopped to release resources. */
 export interface SpinningSlicesHandle {
   stop(): void;
+}
+
+/**
+ * A box carrying UVs and a rest-pose `tex3` (its local positions), so cut faces
+ * can be textured as solid material interiors (ADR 0010).
+ */
+function texturedBox(width = 1, height = 1, depth = 1): Mesh {
+  const box = createBox(width, height, depth);
+  const uvs: number[] = [];
+  for (let i = 0; i < box.positions.length; i += 3) {
+    uvs.push(box.positions[i]! / width + 0.5, box.positions[i + 1]! / height + 0.5);
+  }
+  return { ...box, uvs, tex3: box.positions.slice() };
 }
 
 /** Start the spinning-slices showcase on a canvas. */
@@ -41,6 +59,15 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
         brittleness: 0,
         friction: 0.4,
       }),
+      // Wood cuts cleanly (low brittleness) and resists shattering (high
+      // toughness); its interior renders as solid grain (ADR 0010).
+      defineMaterial('wood', {
+        density: 0.7,
+        toughness: 1e6,
+        brittleness: 0.2,
+        restitution: 0.2,
+        friction: 0.5,
+      }),
     ],
   });
 
@@ -57,8 +84,16 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
   camera.position.set(0, 0, 9);
   camera.lookAt(0, 0, 0);
 
+  // Solid-wood interior for cut faces, keyed by the entity's material id.
+  const interior = new InteriorAppearanceRegistry().registerPreset('wood', {
+    pattern: 'wood',
+    axis: [0, 1, 0],
+    frequency: 6,
+  });
+
   const renderer = new ThreeRenderer({
     scene,
+    interior,
     createMaterial: (item) => {
       switch (item.meshRef) {
         case 'steel':
@@ -75,17 +110,21 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
             transparent: true,
             opacity: 0.85,
           });
+        case 'wood':
+          // Bark-like exterior; the cut interior comes from the wood preset.
+          return new MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.85 });
         default:
           return new MeshStandardMaterial({ color: 0x40c4ff, roughness: 0.4 });
       }
     },
   });
 
-  // A row of gently spinning showcase objects.
+  // A row of gently spinning wood blocks; a swipe cuts them to reveal grain.
   for (let i = -2; i <= 2; i++) {
     world.spawn({
-      geometry: createBox(1.2, 1.2, 1.2),
-      meshRef: 'showcase',
+      geometry: texturedBox(1.2, 1.2, 1.2),
+      meshRef: 'wood',
+      material: 'wood',
       position: [i * 2, 0, 0],
       angularVelocity: [0.3, 0.6, 0],
       mass: 1,
@@ -190,6 +229,7 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp);
       renderer.clear();
+      interior.dispose();
       webgl.dispose();
     },
   };

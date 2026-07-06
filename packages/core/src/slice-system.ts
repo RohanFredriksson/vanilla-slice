@@ -10,7 +10,7 @@ import type {
   InteractionOutcome,
   InteractionProcessor,
 } from '@vanilla-slice/interactions';
-import { toWorldMesh, replaceWithFragments } from './fragment-util';
+import { toWorldMesh, replaceWithFragments, entityModelInverse } from './fragment-util';
 import { processInteractions } from './interaction-system';
 import { fractureEntity, buildFractureOptions, BRITTLE_SLICE_CUTOFF } from './fracture-system';
 import type { SimWorld, SliceOutcome, EntityId } from './types';
@@ -43,7 +43,11 @@ function sliceEntity(
   if (!worldMesh) {
     return { removed: [], created: [] };
   }
-  const fragments = sliceMesh(worldMesh, volume, { separationSpeed });
+  const capToMaterialSpace = entityModelInverse(world, id);
+  const fragments = sliceMesh(worldMesh, volume, {
+    separationSpeed,
+    ...(capToMaterialSpace ? { capToMaterialSpace } : {}),
+  });
   if (fragments.length < 2) {
     // The plane did not actually divide this mesh; leave it intact.
     return { removed: [], created: [] };

@@ -8,7 +8,7 @@ import type {
   InteractionOutcome,
   InteractionProcessor,
 } from '@vanilla-slice/interactions';
-import { toWorldMesh, replaceWithFragments } from './fragment-util';
+import { toWorldMesh, replaceWithFragments, entityModelInverse } from './fragment-util';
 import type { SimWorld, SliceOutcome, Vec3T, EntityId } from './types';
 
 /** Brittleness at or above which a slice shatters (fractures) instead of cutting. */
@@ -60,7 +60,11 @@ export function fractureEntity(
   if (!worldMesh) {
     return { removed: [], created: [] };
   }
-  const fragments = fractureMesh(worldMesh, options);
+  const capToMaterialSpace = entityModelInverse(world, id);
+  const fragments = fractureMesh(
+    worldMesh,
+    capToMaterialSpace ? { ...options, capToMaterialSpace } : options,
+  );
   if (fragments.length < 2) {
     return { removed: [], created: [] };
   }

@@ -4,5 +4,6 @@
 
 export * from './three-utils';
 export * from './three-renderer';
+export * from './interior-appearance';
 
 export const RENDERER_THREE_PACKAGE = '@vanilla-slice/renderer-three';

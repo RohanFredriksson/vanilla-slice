@@ -6,6 +6,9 @@ import type { ConvexShape } from '@vanilla-slice/physics';
 import { recenterMesh, boundingRadius } from './mesh-util';
 import type { SimWorld, SliceOutcome, Vec3T, EntityId } from './types';
 
+/** Column-major 4x4 matrix (matches `@vanilla-slice/math`'s `Mat4`). */
+type Mat4T = ReturnType<typeof Mat4.create>;
+
 const IDENTITY_SCALE: Vec3T = [1, 1, 1];
 
 /**
@@ -28,6 +31,27 @@ export function toWorldMesh(world: SimWorld, id: EntityId): Mesh | null {
   );
   transformMesh(worldMesh, xform);
   return worldMesh;
+}
+
+/**
+ * The inverse of an entity's model matrix (world → rest-pose/model space).
+ * Slice/fracture pass this as `capToMaterialSpace` so newly-exposed cut faces
+ * receive material-space `tex3` coordinates for solid/triplanar texturing
+ * (ADR 0010). Returns `null` when the entity has no body.
+ */
+export function entityModelInverse(world: SimWorld, id: EntityId): Mat4T | null {
+  const body = world.bodies.get(id);
+  if (!body) {
+    return null;
+  }
+  const xform = Mat4.create();
+  Mat4.fromRotationTranslationScale(
+    xform,
+    body.orientation,
+    body.position,
+    IDENTITY_SCALE,
+  );
+  return Mat4.invert(Mat4.create(), xform);
 }
 
 /** A world-space fragment ready to become a body (produced by slice/fracture). */

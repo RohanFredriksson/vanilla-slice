@@ -17,6 +17,12 @@ type Camera = PerspectiveCamera | OrthographicCamera;
  * Convert an engine mesh (flat positions + indices) to a Three.js
  * `BufferGeometry`, computing smooth vertex normals. Rendering owns the GPU
  * geometry; the engine mesh is never mutated.
+ *
+ * Optional attribute channels are uploaded when present (ADR 0010): `uvs` as the
+ * standard `uv` attribute, `tex3` (rest-pose/model-space coordinate) as a custom
+ * `tex3` attribute for solid/triplanar interior shaders, and per-triangle
+ * `groups` coalesced into geometry groups so a material array can paint exterior
+ * (slot 0) and interior/cut (slot 1) faces differently.
  */
 export function meshToBufferGeometry(mesh: EngineMesh): BufferGeometry {
   const geometry = new BufferGeometry();
@@ -24,9 +30,49 @@ export function meshToBufferGeometry(mesh: EngineMesh): BufferGeometry {
     'position',
     new Float32BufferAttribute(mesh.positions.slice(), 3),
   );
+  if (mesh.uvs) {
+    geometry.setAttribute('uv', new Float32BufferAttribute(mesh.uvs.slice(), 2));
+  }
+  if (mesh.tex3) {
+    geometry.setAttribute(
+      'tex3',
+      new Float32BufferAttribute(mesh.tex3.slice(), 3),
+    );
+  }
   geometry.setIndex(mesh.indices.slice());
   geometry.computeVertexNormals();
+  if (mesh.uvs) {
+    // Exterior tangent-space normal mapping (ADR 0010 P6): tangents are derived
+    // from positions + uv + normal, so a slot-0 material's `normalMap` works
+    // without carrying tangents through the engine or the split.
+    geometry.computeTangents();
+  }
+  if (mesh.groups) {
+    applyGroups(geometry, mesh.groups);
+  }
   return geometry;
+}
+
+/**
+ * Coalesce a per-triangle material-slot list into contiguous geometry groups so
+ * the mesh can carry a material array (exterior/interior). Indices are three per
+ * triangle, so ranges are expressed in index units.
+ */
+function applyGroups(geometry: BufferGeometry, groups: number[]): void {
+  geometry.clearGroups();
+  if (groups.length === 0) {
+    return;
+  }
+  let runStart = 0;
+  let runSlot = groups[0] ?? 0;
+  for (let t = 1; t <= groups.length; t++) {
+    const slot = groups[t];
+    if (t === groups.length || slot !== runSlot) {
+      geometry.addGroup(runStart * 3, (t - runStart) * 3, runSlot);
+      runStart = t;
+      runSlot = slot ?? 0;
+    }
+  }
 }
 
 /**

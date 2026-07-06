@@ -11,7 +11,13 @@ export function recenterMesh(mesh: Mesh, center: Vec3T): Mesh {
     positions[i + 1] = (positions[i + 1] ?? 0) - center[1];
     positions[i + 2] = (positions[i + 2] ?? 0) - center[2];
   }
-  return createMesh(positions, mesh.indices.slice());
+  // Only positions move; uv/tex3/groups are pose-invariant, so carry them
+  // through untouched (ADR 0010 — tex3 is a rest-pose coordinate).
+  return createMesh(positions, mesh.indices.slice(), {
+    uvs: mesh.uvs?.slice(),
+    tex3: mesh.tex3?.slice(),
+    groups: mesh.groups?.slice(),
+  });
 }
 
 /** Maximum distance from `center` to any vertex — a bounding-sphere radius. */

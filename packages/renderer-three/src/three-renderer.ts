@@ -13,6 +13,7 @@ import {
 import type { Mesh as EngineMesh } from '@vanilla-slice/core';
 import type { EntityId, RenderItem } from '@vanilla-slice/core';
 import { meshToBufferGeometry } from './three-utils';
+import type { InteriorAppearanceRegistry } from './interior-appearance';
 
 type Camera = PerspectiveCamera | OrthographicCamera;
 
@@ -32,6 +33,15 @@ export interface ThreeRendererOptions {
   scene?: Scene;
   /** Factory for an entity's material (defaults to a white standard material). */
   createMaterial?: (item: RenderItem) => Material;
+  /**
+   * Optional registry mapping an entity's material id to an interior
+   * (cut-surface) material. When present and an entity's geometry carries a
+   * `tex3` attribute and geometry groups, the mesh is given a material array:
+   * slot 0 = exterior (from `createMaterial`), slot 1 = interior (ADR 0010).
+   * The registry owns its materials' lifecycle; the renderer never disposes
+   * them.
+   */
+  interior?: InteriorAppearanceRegistry;
 }
 
 /**
@@ -47,6 +57,7 @@ export class ThreeRenderer {
   readonly scene: Scene;
   private readonly meshes = new Map<EntityId, Mesh>();
   private readonly createMaterial: (item: RenderItem) => Material;
+  private readonly interior?: InteriorAppearanceRegistry;
   private readonly fallbackGeometry = new BoxGeometry(1, 1, 1);
 
   constructor(options: ThreeRendererOptions = {}) {
@@ -54,6 +65,7 @@ export class ThreeRenderer {
     this.createMaterial =
       options.createMaterial ??
       (() => new MeshStandardMaterial({ color: 0xffffff }));
+    this.interior = options.interior;
   }
 
   /**
@@ -130,9 +142,32 @@ export class ThreeRenderer {
 
   private createMesh(source: RenderSource, item: RenderItem): Mesh {
     const geometry = this.geometryFor(source, item.id);
-    const mesh = new Mesh(geometry, this.createMaterial(item));
+    const material = this.materialFor(geometry, item);
+    const mesh = new Mesh(geometry, material);
     mesh.userData.entityId = item.id;
     return mesh;
+  }
+
+  /**
+   * Resolve the material(s) for an entity. Returns a `[exterior, interior]`
+   * array when an interior registry resolves the entity's material *and* the
+   * geometry carries the `tex3` attribute and groups the interior shader needs;
+   * otherwise the single exterior material (which Three applies to all groups).
+   */
+  private materialFor(
+    geometry: BufferGeometry,
+    item: RenderItem,
+  ): Material | Material[] {
+    const exterior = this.createMaterial(item);
+    if (
+      !this.interior ||
+      geometry.groups.length === 0 ||
+      !geometry.getAttribute('tex3')
+    ) {
+      return exterior;
+    }
+    const interior = this.interior.resolve(item.materialId);
+    return interior ? [exterior, interior] : exterior;
   }
 
   private geometryFor(source: RenderSource, id: EntityId): BufferGeometry {
@@ -145,14 +180,11 @@ export class ThreeRenderer {
     if (mesh.geometry !== this.fallbackGeometry && mesh.geometry.dispose) {
       mesh.geometry.dispose();
     }
+    // Only the exterior (slot 0) material is renderer-owned; interior materials
+    // belong to the InteriorAppearanceRegistry and are disposed by it.
     const material = mesh.material;
-    if (Array.isArray(material)) {
-      for (const m of material) {
-        m.dispose();
-      }
-    } else {
-      material.dispose();
-    }
+    const exterior = Array.isArray(material) ? material[0] : material;
+    exterior?.dispose();
     this.meshes.delete(id);
   }
 }

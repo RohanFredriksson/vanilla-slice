@@ -7,7 +7,30 @@ import {
   fromNormalAndPoint,
   createSliceVolume,
 } from '@vanilla-slice/core';
+import type { Mesh, Material } from '@vanilla-slice/core';
 import { ThreeRenderer } from './three-renderer';
+import { InteriorAppearanceRegistry } from './interior-appearance';
+
+/** A wood material for world registration (physics-only fields). */
+const WOOD: Material = {
+  id: 'wood',
+  density: 700,
+  friction: 0.5,
+  restitution: 0.2,
+  toughness: 100,
+  brittleness: 0.2,
+  fracturePropagationFactor: 0.3,
+};
+
+/** A unit box carrying UVs, tex3, and one interior (slot 1) face. */
+function texturedBoxGeometry(): Mesh {
+  const box = createBox();
+  const tris = box.indices.length / 3;
+  const groups = new Array<number>(tris).fill(0);
+  groups[0] = 1;
+  const uvs = new Array<number>((box.positions.length / 3) * 2).fill(0);
+  return { ...box, uvs, tex3: box.positions.slice(), groups };
+}
 
 describe('ThreeRenderer', () => {
   it('creates a scene mesh per renderable entity and syncs transforms', () => {
@@ -110,5 +133,81 @@ describe('ThreeRenderer', () => {
 
     expect(renderer.pick(camera, 0, 0)).toBe(id);
     expect(renderer.pick(camera, 0.95, 0.95)).toBeNull();
+  });
+
+  it('gives an entity a [exterior, interior] material array when textured (ADR 0010)', () => {
+    const world = createWorld({ gravity: [0, 0, 0], materials: [WOOD] });
+    const id = world.spawn({
+      geometry: texturedBoxGeometry(),
+      meshRef: 'log',
+      material: 'wood',
+      position: [0, 0, 0],
+    });
+
+    const interior = new InteriorAppearanceRegistry().registerPreset('wood', {
+      pattern: 'wood',
+    });
+    const renderer = new ThreeRenderer({ interior });
+    renderer.sync(world);
+
+    const material = renderer.getObject(id)!.material;
+    expect(Array.isArray(material)).toBe(true);
+    expect((material as Material[]).length).toBe(2);
+    // Slot 1 is the shared, registry-owned interior material.
+    expect((material as Material[])[1]).toBe(interior.resolve('wood'));
+  });
+
+  it('uses a single material when no interior registry is provided', () => {
+    const world = createWorld({ gravity: [0, 0, 0], materials: [WOOD] });
+    const id = world.spawn({
+      geometry: texturedBoxGeometry(),
+      meshRef: 'log',
+      material: 'wood',
+      position: [0, 0, 0],
+    });
+    const renderer = new ThreeRenderer();
+    renderer.sync(world);
+    expect(Array.isArray(renderer.getObject(id)!.material)).toBe(false);
+  });
+
+  it('uses a single material when the geometry has no tex3 attribute', () => {
+    const world = createWorld({ gravity: [0, 0, 0], materials: [WOOD] });
+    const id = world.spawn({
+      geometry: createBox(), // no uv/tex3/groups
+      meshRef: 'plain',
+      material: 'wood',
+      position: [0, 0, 0],
+    });
+    const interior = new InteriorAppearanceRegistry().registerPreset('wood', {
+      pattern: 'wood',
+    });
+    const renderer = new ThreeRenderer({ interior });
+    renderer.sync(world);
+    expect(Array.isArray(renderer.getObject(id)!.material)).toBe(false);
+  });
+
+  it('does not dispose registry-owned interior materials on despawn', () => {
+    const world = createWorld({ gravity: [0, 0, 0], materials: [WOOD] });
+    const id = world.spawn({
+      geometry: texturedBoxGeometry(),
+      meshRef: 'log',
+      material: 'wood',
+      position: [0, 0, 0],
+    });
+    const interior = new InteriorAppearanceRegistry().registerPreset('wood', {
+      pattern: 'wood',
+    });
+    const interiorMat = interior.resolve('wood')!;
+    let disposed = false;
+    interiorMat.dispose = () => {
+      disposed = true;
+    };
+
+    const renderer = new ThreeRenderer({ interior });
+    renderer.sync(world);
+    world.despawn(id);
+    renderer.sync(world);
+
+    expect(disposed).toBe(false); // registry owns interior lifecycle
   });
 });

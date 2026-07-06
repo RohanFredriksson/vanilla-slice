@@ -143,6 +143,12 @@ export interface RenderItem {
   position: Vec3T;
   orientation: QuatT;
   visible: boolean;
+  /**
+   * The entity's material id, when it has a {@link MaterialRef}. Surfaced as
+   * neutral data so the render adapter can pick a per-material appearance (e.g.
+   * an interior/cut-surface texture); the engine still owns no looks (ADR 0010).
+   */
+  materialId?: MaterialId;
 }
 
 /** The result of a slice: which entities were removed and created. */
