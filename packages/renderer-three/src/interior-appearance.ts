@@ -1,5 +1,16 @@
-import { MeshStandardMaterial, type Material, type Shader } from 'three';
+import { MeshStandardMaterial, type Material } from 'three';
 import type { MaterialId } from '@vanilla-slice/core';
+
+/**
+ * The subset of Three's `onBeforeCompile` shader parameter this module mutates.
+ * Declared structurally so it stays compatible across `three` versions (which
+ * have renamed the concrete parameter type).
+ */
+interface InjectableShader {
+  uniforms: Record<string, { value: unknown }>;
+  vertexShader: string;
+  fragmentShader: string;
+}
 
 /**
  * Built-in interior surface looks for newly-exposed cut/fracture faces
@@ -197,7 +208,7 @@ export function createInteriorMaterial(
     metalness: options.metalness ?? 0,
   });
 
-  material.onBeforeCompile = (shader: Shader) => {
+  material.onBeforeCompile = (shader: InjectableShader) => {
     shader.uniforms.uPattern = { value: patternId };
     shader.uniforms.uColorA = { value: colorA };
     shader.uniforms.uColorB = { value: colorB };
