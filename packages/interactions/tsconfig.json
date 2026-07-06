@@ -8,13 +8,8 @@
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts", "dist"],
   "references": [
-    { "path": "../physics" },
-    { "path": "../slicing" },
-    { "path": "../fracture" },
-    { "path": "../spatial" },
-    { "path": "../geometry" },
     { "path": "../materials" },
-    { "path": "../interactions" },
-    { "path": "../math" }
+    { "path": "../physics" },
+    { "path": "../spatial" }
   ]
 }

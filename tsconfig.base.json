@@ -23,10 +23,13 @@
     "baseUrl": ".",
     "paths": {
       "@vanilla-slice/math": ["packages/math/src/index.ts"],
+      "@vanilla-slice/materials": ["packages/materials/src/index.ts"],
       "@vanilla-slice/geometry": ["packages/geometry/src/index.ts"],
       "@vanilla-slice/physics": ["packages/physics/src/index.ts"],
       "@vanilla-slice/spatial": ["packages/spatial/src/index.ts"],
       "@vanilla-slice/slicing": ["packages/slicing/src/index.ts"],
+      "@vanilla-slice/fracture": ["packages/fracture/src/index.ts"],
+      "@vanilla-slice/interactions": ["packages/interactions/src/index.ts"],
       "@vanilla-slice/core": ["packages/core/src/index.ts"],
       "@vanilla-slice/renderer-three": ["packages/renderer-three/src/index.ts"],
       "@vanilla-slice/runtime": ["packages/runtime/src/index.ts"]

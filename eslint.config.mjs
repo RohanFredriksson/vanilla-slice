@@ -28,6 +28,7 @@ export default tseslint.config(
           allow: [],
           depConstraints: [
             { sourceTag: 'scope:math', onlyDependOnLibsWithTags: [] },
+            { sourceTag: 'scope:materials', onlyDependOnLibsWithTags: [] },
             {
               sourceTag: 'scope:geometry',
               onlyDependOnLibsWithTags: ['scope:math'],
@@ -49,12 +50,33 @@ export default tseslint.config(
               ],
             },
             {
+              sourceTag: 'scope:fracture',
+              onlyDependOnLibsWithTags: [
+                'scope:geometry',
+                'scope:spatial',
+                'scope:math',
+              ],
+            },
+            {
+              sourceTag: 'scope:interactions',
+              onlyDependOnLibsWithTags: [
+                'scope:materials',
+                'scope:physics',
+                'scope:geometry',
+                'scope:spatial',
+                'scope:math',
+              ],
+            },
+            {
               sourceTag: 'scope:core',
               onlyDependOnLibsWithTags: [
                 'scope:physics',
                 'scope:slicing',
+                'scope:fracture',
                 'scope:spatial',
                 'scope:geometry',
+                'scope:materials',
+                'scope:interactions',
                 'scope:math',
               ],
             },

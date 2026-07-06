@@ -12,7 +12,10 @@ import {
   alpha as stepperAlpha,
 } from '@vanilla-slice/physics';
 import type { FixedStepper } from '@vanilla-slice/physics';
-import { computeConvexHull, approximateConvexDecomposition } from '@vanilla-slice/geometry';
+import { computeConvexHull, approximateConvexDecomposition, computeVolume } from '@vanilla-slice/geometry';
+import { createMaterialLibrary, massFromDensity } from '@vanilla-slice/materials';
+import type { MaterialLibrary } from '@vanilla-slice/materials';
+import { createInteractionQueue, createInteractionRegistry } from '@vanilla-slice/interactions';
 import type { SliceVolume } from '@vanilla-slice/slicing';
 import {
   stepPhysics,
@@ -20,8 +23,10 @@ import {
   runCleanup,
   getRenderState,
 } from './systems';
-import { sliceWorld } from './slice-system';
+import { sliceWorld, sliceProcessor } from './slice-system';
 import type { SliceWorldOptions } from './slice-system';
+import { fractureProcessor } from './fracture-system';
+import { processInteractions } from './interaction-system';
 import { boundingRadius, sphereAabb } from './mesh-util';
 import type {
   SimWorld,
@@ -31,6 +36,7 @@ import type {
   Renderable,
   Sliceable,
   Metadata,
+  MaterialRef,
   RenderItem,
   SliceOutcome,
 } from './types';
@@ -70,6 +76,10 @@ export class World implements SimWorld {
   readonly colliders = new Map<EntityId, ConvexShape>();
   readonly compoundColliders = new Map<EntityId, ConvexShape[]>();
   readonly nonCollidable = new Set<EntityId>();
+  readonly materials: MaterialLibrary;
+  readonly materialRefs = new Map<EntityId, MaterialRef>();
+  readonly interactions = createInteractionQueue();
+  readonly interactionRegistry = createInteractionRegistry<SimWorld>();
   readonly spatial: SpatialHash;
 
   private readonly stepper: FixedStepper;
@@ -77,6 +87,9 @@ export class World implements SimWorld {
 
   constructor(config: WorldConfig = {}) {
     this.config = resolveConfig(config);
+    this.materials = createMaterialLibrary({ materials: config.materials });
+    this.interactionRegistry.register(sliceProcessor);
+    this.interactionRegistry.register(fractureProcessor);
     this.spatial = createSpatialHash(this.config.cellSize);
     this.stepper = createFixedStepper(
       this.config.fixedTimestep,
@@ -92,12 +105,24 @@ export class World implements SimWorld {
       options.radius ??
       (options.geometry ? boundingRadius(options.geometry) : 0.5);
 
+    // Resolve the material (if any) and derive mass from density × volume when
+    // no explicit mass was given. Materialless bodies keep the prior default.
+    const material =
+      options.material !== undefined
+        ? this.materials.get(options.material)
+        : undefined;
+    let mass = options.mass;
+    if (mass === undefined && material && options.geometry) {
+      const volume = Math.abs(computeVolume(options.geometry));
+      mass = volume > 0 ? massFromDensity(material.density, volume) : 1;
+    }
+
     const body = createBody({
       position: options.position,
       velocity: options.velocity,
       orientation: options.orientation,
       angularVelocity: options.angularVelocity,
-      mass: options.mass ?? 1,
+      mass: mass ?? 1,
       radius,
       linearDamping: options.linearDamping,
       angularDamping: options.angularDamping,
@@ -106,6 +131,9 @@ export class World implements SimWorld {
 
     if (options.geometry) {
       this.sliceables.set(id, { mesh: options.geometry, enabled: true });
+    }
+    if (options.material !== undefined) {
+      this.materialRefs.set(id, { materialId: options.material });
     }
     if (options.meshRef !== undefined) {
       this.renderables.set(id, { meshRef: options.meshRef, visible: true });
@@ -151,6 +179,7 @@ export class World implements SimWorld {
     this.colliders.delete(id);
     this.compoundColliders.delete(id);
     this.nonCollidable.delete(id);
+    this.materialRefs.delete(id);
     spatialRemove(this.spatial, id);
     return true;
   }
@@ -171,6 +200,7 @@ export class World implements SimWorld {
    */
   update(frameDelta: number): void {
     advance(this.stepper, frameDelta, (dt) => stepPhysics(this, dt));
+    processInteractions(this);
     syncSpatial(this);
     runCleanup(this);
   }

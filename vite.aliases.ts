@@ -11,10 +11,13 @@ const abs = (relativePath: string): string =>
  */
 export const sliceAliases: Record<string, string> = {
   '@vanilla-slice/math': abs('./packages/math/src/index.ts'),
+  '@vanilla-slice/materials': abs('./packages/materials/src/index.ts'),
   '@vanilla-slice/geometry': abs('./packages/geometry/src/index.ts'),
   '@vanilla-slice/physics': abs('./packages/physics/src/index.ts'),
   '@vanilla-slice/spatial': abs('./packages/spatial/src/index.ts'),
   '@vanilla-slice/slicing': abs('./packages/slicing/src/index.ts'),
+  '@vanilla-slice/fracture': abs('./packages/fracture/src/index.ts'),
+  '@vanilla-slice/interactions': abs('./packages/interactions/src/index.ts'),
   '@vanilla-slice/core': abs('./packages/core/src/index.ts'),
   '@vanilla-slice/renderer-three': abs('./packages/renderer-three/src/index.ts'),
   '@vanilla-slice/runtime': abs('./packages/runtime/src/index.ts'),

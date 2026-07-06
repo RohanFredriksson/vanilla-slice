@@ -2,10 +2,13 @@
   "files": [],
   "references": [
     { "path": "packages/math" },
+    { "path": "packages/materials" },
     { "path": "packages/geometry" },
     { "path": "packages/physics" },
     { "path": "packages/spatial" },
     { "path": "packages/slicing" },
+    { "path": "packages/fracture" },
+    { "path": "packages/interactions" },
     { "path": "packages/core" },
     { "path": "packages/renderer-three" },
     { "path": "packages/runtime" },

@@ -14,7 +14,8 @@ processing, and spatial queries. It is **not** a game. Games and demos are
 ## Golden rules (never violate)
 
 1. **No Angular in the core.** Core packages must not import Angular.
-2. **No Three.js in physics/geometry/slicing/spatial/math/core.** Rendering is an
+2. **No Three.js in the core** (`math`, `materials`, `geometry`, `physics`,
+   `spatial`, `slicing`, `fracture`, `interactions`, `core`). Rendering is an
    adapter only.
 3. **No DOM or browser APIs in the engine.** The engine must run headless.
 4. **No circular dependencies** between packages.
@@ -27,9 +28,9 @@ processing, and spatial queries. It is **not** a game. Games and demos are
 
 ```
 Core Engine (framework-free)  →  Rendering Adapters  →  Runtime / Consumers
-math, geometry, physics,          renderer-three         runtime (loop + input),
-slicing, spatial, core                                   apps, external framework
-                                                         integrations
+math, materials, geometry,        renderer-three         runtime (loop + input),
+physics, spatial, slicing,                               apps, external framework
+fracture, interactions, core                             integrations
 ```
 
 Allowed dependency direction is one-way: consumers depend on adapters/runtime,
@@ -40,11 +41,14 @@ adapters and runtime depend on core; never the reverse. **Framework integrations
 
 ```
 packages/math        # vectors, matrices, quaternions — zero deps
+packages/materials   # physical material data (density, toughness, …) — zero deps
 packages/geometry    # mesh representation, plane intersection, mesh splitting
 packages/physics     # gravity, integration, rigid bodies, collision, cleanup
 packages/slicing     # slice volume, candidate filtering, fragment generation
+packages/fracture    # Voronoi fracture fragment generation (sibling of slicing)
 packages/spatial     # spatial hash / octree / BVH broad-phase queries
-packages/core        # ECS world, entity/component/system orchestration
+packages/interactions # interaction framework: types, processor registry, queue
+packages/core        # ECS world, entity/component/system + interaction orchestration
 packages/renderer-three  # engine state → Three.js meshes, raycasting
 packages/runtime     # framework-agnostic engine loop + swipe-to-slice input
 
@@ -57,8 +61,12 @@ reference Angular host is kept at `docs/examples/angular/` (not built/tested).
 
 Dependency rules:
 - `math` depends on nothing.
+- `materials` depends on nothing (pure-data leaf).
 - `geometry`, `physics`, `spatial` depend only on `math`.
 - `slicing` depends on `geometry`, `spatial`, `math`.
+- `fracture` depends on `geometry`, `spatial`, `math` (sibling of `slicing`).
+- `interactions` depends on `materials`, `physics`, `geometry`, `spatial`,
+  `math`; never on `core`, `slicing`, or `fracture`.
 - `core` orchestrates the above; it depends on core packages, not adapters.
 - `renderer-three` depends on `core` + `math` + Three.js.
 - `runtime` depends on `core` + `math`; never the reverse.
@@ -68,21 +76,38 @@ Dependency rules:
 
 Light **Entity-Component-System (ECS)**:
 - **Entities** are ids with attached components (`Body`, `Renderable`,
-  `Sliceable`, `Metadata`).
+  `Sliceable`, `Metadata`, `MaterialRef`).
 - **Systems** operate on components, not inheritance trees:
-  `PhysicsSystem`, `SliceSystem`, `SpatialSystem`, `RenderSystem`,
-  `CleanupSystem`.
+  `PhysicsSystem`, `CollisionSystem`, `SpatialSystem`, `InteractionSystem`,
+  `RenderSystem`, `CleanupSystem`.
+- **Interactions** (slice, fracture, impact, …) are stateless **processors**
+  registered with the `InteractionSystem` — not bespoke top-level systems
+  (ADR 0009). New interactions are added as new processors.
+
+## Materials & interaction model
+
+Behaviour is **data-driven** (ADR 0009): a `Material` (density, friction,
+restitution, toughness, brittleness), referenced by a `MaterialRef` component,
+decides how an object responds — "fruit slices, glass fractures, steel resists"
+follows from material data, never object-type branching. Collisions/gestures
+enqueue interaction events; the `InteractionSystem` drains them after the physics
+solve and dispatches to a processor: `event → resolve material → evaluate →
+apply`. `fractureThreshold = toughness × object size` gates fracture; there is no
+separate stored threshold.
 
 ## Slicing model
 
-A slice is a **bounded interaction volume**, never an infinite plane:
+A slice is a **bounded interaction volume**, never an infinite plane, dispatched
+as a slice interaction (ADR 0009):
 gesture → world ray → slice plane + radius constraint → spatial query →
 candidate filter → mesh split → fragment generation → physics impulse → cleanup.
+Brittle materials shatter via the fracture pipeline instead of cutting cleanly.
 
 ## Ownership rules
 
 - Physics owns position and velocity.
 - Geometry owns mesh data.
+- Materials own physical-property data (referenced by `MaterialRef`).
 - Renderer owns meshes.
 - Game/app owns score, UI, effects.
 - Engine owns simulation only.
@@ -114,5 +139,8 @@ world.spawn({ geometry, mass: 1, velocity: [1, 5, 0] });
 
 ## Current phase
 
-**Pre-implementation.** Documentation and ADRs are being established. Do not
-write engine implementation code until the roadmap says implementation begins.
+**Implementation.** The core engine, slicing, rendering, runtime, and the
+Materials System / Interaction Framework / Fracture Engine (ADR 0009) are
+implemented (ROADMAP Phases 3–10). Keep `docs/` and ADRs current with every
+change, maintain package boundaries, and do not implement large features without
+explicit approval.

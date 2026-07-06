@@ -1,14 +1,19 @@
-import { Mat4 } from '@vanilla-slice/math';
-import { cloneMesh, transformMesh, computeVolume } from '@vanilla-slice/geometry';
-import { getMass } from '@vanilla-slice/physics';
 import {
   querySliceCandidates,
   sliceIntersectsSphere,
   sliceMesh,
 } from '@vanilla-slice/slicing';
 import type { SliceVolume } from '@vanilla-slice/slicing';
-import { recenterMesh, boundingRadius } from './mesh-util';
-import type { SimWorld, SliceOutcome, Vec3T } from './types';
+import type {
+  InteractionContext,
+  InteractionDecision,
+  InteractionOutcome,
+  InteractionProcessor,
+} from '@vanilla-slice/interactions';
+import { toWorldMesh, replaceWithFragments } from './fragment-util';
+import { processInteractions } from './interaction-system';
+import { fractureEntity, fractureCount, BRITTLE_SLICE_CUTOFF } from './fracture-system';
+import type { SimWorld, SliceOutcome, EntityId } from './types';
 
 /** Options for a slice operation. */
 export interface SliceWorldOptions {
@@ -16,13 +21,81 @@ export interface SliceWorldOptions {
   separationSpeed?: number;
 }
 
-const IDENTITY_SCALE: Vec3T = [1, 1, 1];
+/** Payload carried by a `slice` interaction event. */
+export interface SlicePayload {
+  volume: SliceVolume;
+  separationSpeed: number;
+}
 
 /**
- * SliceSystem — the full slice pipeline for a bounded volume:
- * broad-phase query → narrow filter → world-space mesh split → fragment spawn
- * with separation impulses. The original sliced entity is removed and replaced
- * by its fragments. Core applies the impulses slicing computed (ownership rules).
+ * Slice one entity by a bounded volume: transform its mesh to world space, split
+ * it, and — when the cut actually divides the mesh — replace it with fragment
+ * bodies carrying separation impulses (ADR 0009). Returns entities removed and
+ * created.
+ */
+function sliceEntity(
+  world: SimWorld,
+  id: EntityId,
+  volume: SliceVolume,
+  separationSpeed: number,
+): SliceOutcome {
+  const worldMesh = toWorldMesh(world, id);
+  if (!worldMesh) {
+    return { removed: [], created: [] };
+  }
+  const fragments = sliceMesh(worldMesh, volume, { separationSpeed });
+  if (fragments.length < 2) {
+    // The plane did not actually divide this mesh; leave it intact.
+    return { removed: [], created: [] };
+  }
+  return replaceWithFragments(world, id, worldMesh, fragments);
+}
+
+/**
+ * SliceProcessor — the slice interaction (ADR 0009). It applies to a sliceable
+ * body whose bounding sphere meets the slice volume. Brittle materials
+ * (`brittleness >= {@link BRITTLE_SLICE_CUTOFF}`) shatter via the fracture
+ * pipeline instead of cutting cleanly — slice-driven fracturing, decided purely
+ * from material data. `core` registers it with the world's interaction registry.
+ */
+export const sliceProcessor: InteractionProcessor<SimWorld> = {
+  type: 'slice',
+  evaluate(ctx: InteractionContext<SimWorld>): InteractionDecision {
+    const { world, event } = ctx;
+    const payload = event.payload as SlicePayload | undefined;
+    const body = world.bodies.get(event.entity);
+    const sliceable = world.sliceables.get(event.entity);
+    if (!payload || !body || !sliceable || !sliceable.enabled) {
+      return { applies: false };
+    }
+    return {
+      applies: sliceIntersectsSphere(payload.volume, body.position, body.radius),
+    };
+  },
+  apply(ctx: InteractionContext<SimWorld>): InteractionOutcome {
+    const { world, event, material } = ctx;
+    const payload = event.payload as SlicePayload;
+    if (material.brittleness >= BRITTLE_SLICE_CUTOFF) {
+      return fractureEntity(world, event.entity, {
+        count: fractureCount(material.brittleness),
+        separationSpeed: payload.separationSpeed,
+        seed: event.entity as number,
+      });
+    }
+    return sliceEntity(
+      world,
+      event.entity,
+      payload.volume,
+      payload.separationSpeed,
+    );
+  },
+};
+
+/**
+ * SliceSystem entry point — enqueue a `slice` interaction for every broad-phase
+ * candidate of a bounded volume, then drain the interaction queue. Retained as
+ * the stable public API; slicing now flows through the interaction framework
+ * (ADR 0009), so this is a thin shim over {@link sliceProcessor}.
  */
 export function sliceWorld(
   world: SimWorld,
@@ -31,92 +104,13 @@ export function sliceWorld(
 ): SliceOutcome {
   const separationSpeed =
     options.separationSpeed ?? world.config.sliceSeparationSpeed;
-  const removed: SliceOutcome['removed'] = [];
-  const created: SliceOutcome['created'] = [];
-
-  const xform = Mat4.create();
-  const candidates = querySliceCandidates(world.spatial, volume);
-
-  for (const id of candidates) {
-    const sliceable = world.sliceables.get(id);
-    const body = world.bodies.get(id);
-    if (!sliceable || !sliceable.enabled || !body) {
-      continue;
-    }
-    if (!sliceIntersectsSphere(volume, body.position, body.radius)) {
-      continue;
-    }
-
-    // Transform the local mesh into world space for the cut.
-    const worldMesh = cloneMesh(sliceable.mesh);
-    Mat4.fromRotationTranslationScale(
-      xform,
-      body.orientation,
-      body.position,
-      IDENTITY_SCALE,
-    );
-    transformMesh(worldMesh, xform);
-
-    const fragments = sliceMesh(worldMesh, volume, { separationSpeed });
-    if (fragments.length < 2) {
-      // The plane did not actually divide this mesh; leave it intact.
-      continue;
-    }
-
-    // Capture parent state before despawning.
-    const parentVelocity: Vec3T = [
-      body.velocity[0],
-      body.velocity[1],
-      body.velocity[2],
-    ];
-    const parentAngular: Vec3T = [
-      body.angularVelocity[0],
-      body.angularVelocity[1],
-      body.angularVelocity[2],
-    ];
-    const parentMass = getMass(body);
-    const parentVolume = Math.abs(computeVolume(worldMesh));
-    const meshRef = world.renderables.get(id)?.meshRef;
-    const name = world.metadata.get(id)?.name;
-    const tags = [...(world.metadata.get(id)?.tags ?? [])];
-
-    world.despawn(id);
-    removed.push(id);
-
-    for (const fragment of fragments) {
-      // Bake world orientation into the recentered local mesh; the new body
-      // uses identity orientation with its centroid as position.
-      const localMesh = recenterMesh(fragment.mesh, fragment.centroid);
-      const fragmentVolume = Math.abs(computeVolume(fragment.mesh));
-      const mass =
-        Number.isFinite(parentMass) && parentVolume > 0
-          ? Math.max(parentMass * (fragmentVolume / parentVolume), 1e-3)
-          : 1;
-
-      const velocity: Vec3T = [
-        parentVelocity[0] + fragment.impulse[0],
-        parentVelocity[1] + fragment.impulse[1],
-        parentVelocity[2] + fragment.impulse[2],
-      ];
-
-      const newId = world.spawn({
-        geometry: localMesh,
-        position: [
-          fragment.centroid[0],
-          fragment.centroid[1],
-          fragment.centroid[2],
-        ],
-        velocity,
-        angularVelocity: parentAngular,
-        mass,
-        radius: boundingRadius(localMesh),
-        ...(meshRef !== undefined ? { meshRef } : {}),
-        ...(name !== undefined ? { name } : {}),
-        tags,
-      });
-      created.push(newId);
-    }
+  for (const id of querySliceCandidates(world.spatial, volume)) {
+    world.interactions.enqueue({
+      type: 'slice',
+      entity: id,
+      payload: { volume, separationSpeed } satisfies SlicePayload,
+    });
   }
-
-  return { removed, created };
+  return processInteractions(world);
 }
+

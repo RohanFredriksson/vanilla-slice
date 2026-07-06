@@ -2,6 +2,10 @@
 
 Status: Accepted · Date: 2026-07-05
 
+> Amended by ADR 0009: `SliceSystem` is no longer a top-level system — slicing is
+> a **slice interaction** (a processor) dispatched by the `InteractionSystem`,
+> and a `MaterialRef` component is added. The light-ECS decision below stands.
+
 ## Context
 
 Simulation objects combine varied concerns: physics bodies, renderable meshes,

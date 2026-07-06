@@ -12,10 +12,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@vanilla-slice/math': fromRoot('./packages/math/src/index.ts'),
+      '@vanilla-slice/materials': fromRoot('./packages/materials/src/index.ts'),
       '@vanilla-slice/geometry': fromRoot('./packages/geometry/src/index.ts'),
       '@vanilla-slice/physics': fromRoot('./packages/physics/src/index.ts'),
       '@vanilla-slice/spatial': fromRoot('./packages/spatial/src/index.ts'),
       '@vanilla-slice/slicing': fromRoot('./packages/slicing/src/index.ts'),
+      '@vanilla-slice/fracture': fromRoot('./packages/fracture/src/index.ts'),
+      '@vanilla-slice/interactions': fromRoot('./packages/interactions/src/index.ts'),
       '@vanilla-slice/core': fromRoot('./packages/core/src/index.ts'),
       '@vanilla-slice/runtime': fromRoot('./packages/runtime/src/index.ts'),
     },

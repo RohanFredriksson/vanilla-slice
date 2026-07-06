@@ -1,14 +1,13 @@
 {
-  "name": "@vanilla-slice/core",
+  "name": "@vanilla-slice/interactions",
   "version": "0.1.3",
-  "description": "Framework-agnostic ECS world orchestrating physics, slicing, spatial, and geometry — the main entry point to the Vanilla Slice engine.",
+  "description": "The Vanilla Slice interaction framework: interaction types, processor registry, per-step event queue, and material evaluation.",
   "keywords": [
     "vanilla-slice",
-    "ecs",
-    "game-engine",
-    "physics",
+    "interactions",
+    "fracture",
     "slicing",
-    "3d",
+    "physics",
     "typescript"
   ],
   "license": "MIT",
@@ -16,9 +15,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/RohanFredriksson/vanilla-slice.git",
-    "directory": "packages/core"
+    "directory": "packages/interactions"
   },
-  "homepage": "https://github.com/RohanFredriksson/vanilla-slice/tree/master/packages/core#readme",
+  "homepage": "https://github.com/RohanFredriksson/vanilla-slice/tree/master/packages/interactions#readme",
   "bugs": "https://github.com/RohanFredriksson/vanilla-slice/issues",
   "type": "module",
   "sideEffects": false,
@@ -41,18 +40,13 @@
     "access": "public"
   },
   "dependencies": {
-    "@vanilla-slice/physics": "^0.1.0",
-    "@vanilla-slice/slicing": "^0.1.0",
-    "@vanilla-slice/fracture": "^0.1.0",
-    "@vanilla-slice/spatial": "^0.1.0",
-    "@vanilla-slice/geometry": "^0.1.0",
     "@vanilla-slice/materials": "^0.1.0",
-    "@vanilla-slice/interactions": "^0.1.0",
-    "@vanilla-slice/math": "^0.1.0"
+    "@vanilla-slice/physics": "^0.1.0",
+    "@vanilla-slice/spatial": "^0.1.0"
   },
   "nx": {
     "tags": [
-      "scope:core",
+      "scope:interactions",
       "layer:core"
     ],
     "targets": {

@@ -1,6 +1,8 @@
 import type { RigidBody, Aabb, ConvexShape } from '@vanilla-slice/physics';
 import type { SpatialHash, EntityId } from '@vanilla-slice/spatial';
 import type { Mesh } from '@vanilla-slice/geometry';
+import type { Material, MaterialId, MaterialLibrary } from '@vanilla-slice/materials';
+import type { InteractionQueue, InteractionRegistry } from '@vanilla-slice/interactions';
 
 export type { EntityId };
 
@@ -27,6 +29,15 @@ export interface Metadata {
   name?: string;
 }
 
+/**
+ * MaterialRef component: the id of a {@link Material} registered in the world's
+ * `MaterialLibrary`. Behaviour (slice/fracture/collision) is derived from the
+ * referenced material's data, never from object-type knowledge (ADR 0009).
+ */
+export interface MaterialRef {
+  materialId: MaterialId;
+}
+
 /** A static half-space `dot(normal, p) >= offset` used for simple collision. */
 export interface GroundConfig {
   normal: Vec3T;
@@ -45,6 +56,8 @@ export interface WorldConfig {
   bounds?: Aabb;
   /** Optional ground half-space for simple collision. */
   ground?: GroundConfig;
+  /** Materials to register in the world's library up front (ADR 0009). */
+  materials?: readonly Material[];
   /** Default separation speed applied to slice fragments. */
   sliceSeparationSpeed?: number;
   /** Enable body-vs-body collision resolution. Defaults to `true`. */
@@ -91,6 +104,13 @@ export interface SpawnOptions {
   geometry?: Mesh;
   /** Render handle; presence adds a {@link Renderable} component. */
   meshRef?: string | number;
+  /**
+   * Id of a {@link Material} registered in the world's library. Presence adds a
+   * {@link MaterialRef} component and, when `mass` is omitted and `geometry` is
+   * present, derives the body's mass from the material's density and the mesh
+   * volume. Unknown ids resolve to the library's default material.
+   */
+  material?: MaterialId;
   tags?: string[];
   name?: string;
   /**
@@ -142,6 +162,14 @@ export interface SimWorld {
   readonly compoundColliders: Map<EntityId, ConvexShape[]>;
   /** Entities explicitly excluded from collision (`collides: false`). */
   readonly nonCollidable: Set<EntityId>;
+  /** The world's material registry; entities reference materials by id. */
+  readonly materials: MaterialLibrary;
+  /** Material references keyed by entity (present only for material-tagged bodies). */
+  readonly materialRefs: Map<EntityId, MaterialRef>;
+  /** Per-step queue of interactions to resolve (slice gestures, impacts). */
+  readonly interactions: InteractionQueue;
+  /** Registry of interaction processors keyed by type (slice, fracture, …). */
+  readonly interactionRegistry: InteractionRegistry<SimWorld>;
   spawn(options: SpawnOptions): EntityId;
   despawn(id: EntityId): boolean;
 }

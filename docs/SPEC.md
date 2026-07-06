@@ -1,6 +1,7 @@
 # Vanilla Slice — Specification (SPEC.md)
 
-Status: Draft · Phase: Pre-implementation
+Status: Living · Core engine, slicing, rendering, runtime, materials, the
+interaction framework, and fracture are implemented (ADRs 0001–0009).
 
 ## 1. Overview
 
@@ -75,6 +76,30 @@ consume the engine; the engine is never a game itself.
   repositories, consuming the engine + `runtime`; they host a canvas and manage
   lifecycle but must not drive or gate the engine update/render loop.
 
+### 5.8 Materials (data-driven behaviour)
+- FR-27: Describe physical properties as data via a `Material` (density,
+  friction, restitution, toughness, brittleness); a `MaterialLibrary` registers
+  and resolves materials by id.
+- FR-28: Reference a material from an entity via a `MaterialRef` component;
+  derive body mass from `density × volume` and combine per-body
+  restitution/friction in contacts, falling back to defaults for materialless
+  bodies.
+- FR-29: Contain no behaviour in `materials`; interactions read material data to
+  decide responses (no object-type branching).
+
+### 5.9 Interactions & Fracture
+- FR-30: Model interactions (slice, fracture, impact, …) as stateless
+  **processors** registered with an `InteractionSystem`, dispatched over a
+  per-step event queue after the physics solve (`event → resolve material →
+  evaluate → apply`).
+- FR-31: Dispatch slicing as a slice interaction; retain `sliceWorld`/`world.slice`
+  as a backward-compatible entry point.
+- FR-32: Emit `impact` interaction events from collisions when impact energy
+  exceeds a material's fracture threshold (`toughness × object size`).
+- FR-33: Fracture a mesh into fragments via Voronoi decomposition (runtime
+  generation, optional precomputed patterns, deterministic seeding); core spawns
+  the fragments and applies the impulses geometry computed.
+
 ## 6. Non-Functional Requirements
 
 - NFR-1: Fixed-timestep, deterministic-where-possible physics.
@@ -108,7 +133,8 @@ framework-agnostic.
 ## 8. Constraints
 
 - No Angular in core.
-- No Three.js in physics/geometry/slicing/spatial/math/core.
+- No Three.js in the core (`math`, `materials`, `geometry`, `physics`, `spatial`,
+  `slicing`, `fracture`, `interactions`, `core`).
 - No DOM in the engine.
 - Rendering is an adapter only.
 - One-way dependency flow: framework → adapters → core.

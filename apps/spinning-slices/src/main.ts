@@ -2,7 +2,7 @@
 // A row of slowly spinning sliceable objects on a gravity-free stage; a pointer
 // swipe cuts them. The imperative loop is owned here (ADR 0005).
 
-import { createWorld, createBox, createPlane, fromNormalAndPoint } from '@vanilla-slice/core';
+import { createWorld, createBox, createPlane, fromNormalAndPoint, defineMaterial } from '@vanilla-slice/core';
 import { ThreeRenderer, inverseViewProjection } from '@vanilla-slice/renderer-three';
 import { EngineLoop, SwipeSlicer } from '@vanilla-slice/runtime';
 import {
@@ -22,7 +22,26 @@ export interface SpinningSlicesHandle {
 
 /** Start the spinning-slices showcase on a canvas. */
 export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHandle {
-  const world = createWorld({ gravity: [0, 0, 0] });
+  // Data-driven materials (ADR 0009): brittle glass fractures on impact; tough
+  // steel resists. Bounds keep drifting fragments from accumulating forever.
+  const world = createWorld({
+    gravity: [0, 0, 0],
+    bounds: { min: [-14, -9, -9], max: [14, 9, 9] },
+    materials: [
+      defineMaterial('glass', {
+        density: 2.5,
+        toughness: 10,
+        brittleness: 0.85,
+        restitution: 0.1,
+      }),
+      defineMaterial('steel', {
+        density: 7.8,
+        toughness: 1e6,
+        brittleness: 0,
+        friction: 0.4,
+      }),
+    ],
+  });
 
   const webgl = new WebGLRenderer({ canvas, antialias: true });
   webgl.setClearColor(0x0f0f16);
@@ -39,8 +58,26 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
 
   const renderer = new ThreeRenderer({
     scene,
-    createMaterial: () =>
-      new MeshStandardMaterial({ color: 0x40c4ff, roughness: 0.4 }),
+    createMaterial: (item) => {
+      switch (item.meshRef) {
+        case 'steel':
+          return new MeshStandardMaterial({
+            color: 0x8a8f98,
+            roughness: 0.3,
+            metalness: 0.6,
+          });
+        case 'glass':
+          return new MeshStandardMaterial({
+            color: 0x8ce0ff,
+            roughness: 0.1,
+            metalness: 0.1,
+            transparent: true,
+            opacity: 0.85,
+          });
+        default:
+          return new MeshStandardMaterial({ color: 0x40c4ff, roughness: 0.4 });
+      }
+    },
   });
 
   // A row of gently spinning showcase objects.
@@ -54,6 +91,32 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
       tags: ['showcase'],
     });
   }
+
+  // Collision-driven fracture demo (ADR 0009): a static steel slab above the row
+  // that launched glass cubes shatter against. Steel's huge toughness makes it
+  // immovable and unbreakable; glass fractures because its material says so.
+  world.spawn({
+    geometry: createBox(0.6, 3, 3),
+    meshRef: 'steel',
+    position: [0, 3, 0],
+    mass: 0,
+    material: 'steel',
+    tags: ['wall'],
+  });
+
+  const launchGlass = (): void => {
+    world.spawn({
+      geometry: createBox(1, 1, 1),
+      meshRef: 'glass',
+      position: [-8, 3, 0],
+      velocity: [8, 0, 0],
+      angularVelocity: [0.6, 0.4, 0.5],
+      material: 'glass',
+      tags: ['glass'],
+    });
+  };
+  const LAUNCH_INTERVAL = 2.5;
+  let sinceLaunch = LAUNCH_INTERVAL;
 
   const playPlane = fromNormalAndPoint(createPlane(), [0, 0, 1], [0, 0, 0]);
   const slicer = new SwipeSlicer({
@@ -106,6 +169,11 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
   resizeObserver.observe(canvas);
 
   const loop = new EngineLoop((dt) => {
+    sinceLaunch += dt;
+    if (sinceLaunch >= LAUNCH_INTERVAL) {
+      sinceLaunch = 0;
+      launchGlass();
+    }
     world.update(dt);
     renderer.sync(world);
     webgl.render(scene, camera);

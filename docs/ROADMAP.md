@@ -1,9 +1,9 @@
 # Vanilla Slice — Roadmap (ROADMAP.md)
 
-Status: Draft · Phase: Pre-implementation
+Status: Living · Phases 0–10 implemented; Phase 7 hardening and follow-ups ongoing.
 
 The roadmap sequences work from documentation through a working demo. Each phase
-gates the next. Implementation does not begin until Phase 2 is approved.
+gates the next.
 
 ## Phase 0 — Context & Instructions (current)
 - [x] Capture design context (`AI_CONTEXT.md`).
@@ -108,6 +108,68 @@ Run the demos in a browser (Vite dev server; engine packages resolve to source):
   - [ ] Add the `NPM_TOKEN` repository secret and bootstrap the first release
         (`npx nx release 0.1.0 --first-release --yes`).
   - [ ] npm publish provenance / supply-chain attestation.
+
+## Phase 8 — Materials System (ADR 0009, proposed)
+
+Data-driven physical properties, separate from behaviour. **Prerequisite for
+Phases 9–10.** Behaviour-neutral: today's defaults remain the fallback.
+
+- [x] New `materials` package (leaf; depends on nothing). `Material` record
+      (density, friction, restitution, toughness, brittleness) + `MaterialLibrary`
+      registry. Fracture initiation gates on `toughness` (× collider size),
+      derived at evaluation time — no stored `fractureThreshold`.
+- [x] `MaterialRef` component in `core`; derive mass from material density ×
+      geometry volume, and combine per-body restitution/friction in contacts,
+      with existing defaults as fallback (materialless bodies unchanged).
+- [x] Nx tag `scope:materials` + boundary rule (`→ []`); `scope:materials` added
+      to `scope:core`'s allowed deps.
+- [x] Headless tests: registry lookup, mass-from-density, default fallback.
+- [ ] Defer `hardness`, full `elasticity`, `fracturePropagationFactor`,
+      anisotropy, thermal, fatigue, per-face materials (see ADR 0009).
+
+## Phase 9 — Interaction Framework (ADR 0009, proposed)
+
+Generalise the top-level Slice system into a pipeline of stateless processors.
+**Depends on Phase 8** (processors resolve materials).
+
+- [x] New `interactions` package (framework only): interaction/event types,
+      `InteractionProcessor` interface, evaluator, registry, material-evaluation
+      glue. Depends on `materials`, `physics`, `geometry`, `spatial`, `math`.
+- [x] Nx tag `scope:interactions` + boundary rule; add to `scope:core` deps.
+- [x] `InteractionSystem` in `core` driving a per-step, stably-ordered event
+      queue; run after `resolveCollisions`, before cleanup.
+- [x] `SliceProcessor` wrapping `slicing`; `sliceWorld` becomes a thin shim that
+      enqueues a `slice` event (backward compatible).
+- [x] Route `resolveCollisions` to enqueue collision/impact events when impact
+      energy exceeds the material threshold.
+- [x] Reserve future interaction types (deformation, explosion, laser,
+      constraint-failure) as enum values with **no** interfaces yet.
+- [x] Headless tests: gesture → slice via framework; collision → event; stable
+      ordering / determinism.
+
+## Phase 10 — Fracture Engine (ADR 0009, proposed)
+
+Real-time, material-driven fragmentation. **Depends on Phases 8 and 9.**
+
+- [x] New `fracture` package (sibling of `slicing`): Voronoi cell generation
+      (iterative bisector clipping), optional precomputed/normalized patterns,
+      deterministic seeded RNG → fragment meshes. Depends on `geometry` (+ its
+      transitive `math`); reuses `splitMeshByPlane`/cap infrastructure.
+- [x] Nx tag `scope:fracture` + boundary rule; add to `scope:core` deps.
+- [x] `FractureProcessor` in `core`: collision/impact-driven (registered for
+      `impact`, origin = contact point) and slice-driven (brittle materials
+      shatter) fracture gated by material thresholds; spawns fragments + applies
+      impulses via the shared `replaceWithFragments` helper (core owns lifecycle).
+- [x] Configurable fracture thresholds (via `toughness`) and fragment count (via
+      `brittleness`), all data-driven. Propagation solver still deferred.
+- [x] Performance guards: per-event fragment budget/cap (`MAX_SEEDS`),
+      deterministic RNG, depth-limited (single-pass) generation. Profiling
+      against the "hundreds of objects" goal still to do.
+- [ ] Defer runtime optimisation strategies (off-thread generation, richer
+      propagation) to a follow-up.
+- [x] End-to-end demo validation: `spinning-slices` launches glass cubes at a
+      static steel slab; glass shatters into Voronoi fragments on impact, steel
+      resists — the full collision → impact → material → fracture path, rendered.
 
 ## AI-DLC operating cadence
 - Break phases into small issues on the board:

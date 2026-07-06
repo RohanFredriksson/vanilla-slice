@@ -8,8 +8,9 @@ Three layers with a strict one-way dependency direction:
 Framework integration → Rendering adapters → Core engine. Never the reverse.
 
 ## 2. The core is pure
-Core packages (`math`, `geometry`, `physics`, `slicing`, `spatial`, `core`) have
-no Angular, no Three.js, no DOM, and no browser APIs. They must run headless.
+Core packages (`math`, `materials`, `geometry`, `physics`, `slicing`, `fracture`,
+`spatial`, `interactions`, `core`) have no Angular, no Three.js, no DOM, and no
+browser APIs. They must run headless.
 
 ## 3. Rendering is an adapter
 Adapters read engine state and produce visuals. They never own simulation state
@@ -17,18 +18,22 @@ and never mutate physics/geometry ownership data.
 
 ## 4. Composition over inheritance
 Use a light ECS: entities carry components; systems operate on components. Avoid
-deep inheritance trees.
+deep inheritance trees. Interactions (slice, fracture, impact, …) are stateless
+**processors** registered with the `InteractionSystem`, not subclasses or bespoke
+top-level systems (ADR 0009).
 
 ## 5. Clear ownership
 - Physics owns position and velocity.
 - Geometry owns mesh data.
+- Materials own physical-property data (referenced by `MaterialRef`).
 - Renderer owns meshes.
 - App/game owns score, UI, effects.
 - Engine owns simulation only.
 
 ## 6. Bounded interactions
 A slice is a bounded volume (plane + radius), never an infinite plane. Effects
-are localized and spatially filtered.
+are localized and spatially filtered. Behaviour is data-driven: materials, not
+object types, decide how an interaction resolves (ADR 0009).
 
 ## 7. Deterministic-where-possible simulation
 Fixed timestep, minimal hidden state, reproducible results where feasible.

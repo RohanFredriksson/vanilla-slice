@@ -9,6 +9,7 @@ import {
 } from '@vanilla-slice/physics';
 import type { RigidBody, ContactManifold } from '@vanilla-slice/physics';
 import { insert, getPotentialPairs } from '@vanilla-slice/spatial';
+import { exceedsFractureThreshold } from '@vanilla-slice/interactions';
 import { sphereAabb } from './mesh-util';
 import type { SimWorld, RenderItem, EntityId } from './types';
 import type { ConvexShape } from '@vanilla-slice/physics';
@@ -50,17 +51,67 @@ function sphereManifold(a: RigidBody, b: RigidBody): ContactManifold | null {
 }
 
 /**
+ * A body's effective restitution/friction: its material's value when it carries
+ * a `MaterialRef`, else the world default. Materialless pairs therefore reduce
+ * to the world config exactly as before (behaviour-neutral — ADR 0009).
+ */
+function bodyRestitution(world: SimWorld, id: EntityId): number {
+  const ref = world.materialRefs.get(id);
+  return ref ? world.materials.get(ref.materialId).restitution : world.config.restitution;
+}
+
+function bodyFriction(world: SimWorld, id: EntityId): number {
+  const ref = world.materialRefs.get(id);
+  return ref ? world.materials.get(ref.materialId).friction : world.config.friction;
+}
+
+/** Kinetic energy of approach for a colliding pair (reduced-mass estimate). */
+function pairImpactEnergy(a: RigidBody, b: RigidBody): number {
+  const invSum = a.invMass + b.invMass;
+  if (invSum === 0) {
+    return 0;
+  }
+  const dx = a.velocity[0] - b.velocity[0];
+  const dy = a.velocity[1] - b.velocity[1];
+  const dz = a.velocity[2] - b.velocity[2];
+  return (0.5 * (dx * dx + dy * dy + dz * dz)) / invSum;
+}
+
+/**
+ * Enqueue an `impact` interaction for a body when the collision energy exceeds
+ * its material's fracture threshold (`toughness × size`). Materialless bodies
+ * resolve to the unbreakable default and never qualify, so this stays
+ * behaviour-neutral until a fracture processor is registered (ADR 0009).
+ */
+function enqueueImpact(
+  world: SimWorld,
+  id: EntityId,
+  other: EntityId,
+  body: RigidBody,
+  energy: number,
+  contact: ContactManifold,
+): void {
+  const ref = world.materialRefs.get(id);
+  if (!ref) {
+    return;
+  }
+  const material = world.materials.get(ref.materialId);
+  if (exceedsFractureThreshold(material, energy, body.radius)) {
+    world.interactions.enqueue({ type: 'impact', entity: id, other, energy, contact });
+  }
+}
+
+/**
  * CollisionSystem — resolve body-vs-body contacts. Broad-phase candidate pairs
  * come from the spatial hash; narrow-phase uses convex hulls (GJK/EPA + face
  * clipping) when both bodies have a collider, falling back to bounding spheres.
  * Bodies with a compound (decomposed) collider test each of their hulls.
  * Static/static and opted-out (`collides: false`) pairs are skipped.
+ *
+ * Contact restitution/friction are combined from the two bodies' materials
+ * (max restitution, geometric-mean friction), falling back to world defaults.
  */
 export function resolveCollisions(world: SimWorld): void {
-  const options = {
-    restitution: world.config.restitution,
-    friction: world.config.friction,
-  };
   for (const [idA, idB] of getPotentialPairs(world.spatial)) {
     if (world.nonCollidable.has(idA) || world.nonCollidable.has(idB)) {
       continue;
@@ -70,6 +121,17 @@ export function resolveCollisions(world: SimWorld): void {
     if (!a || !b || (a.invMass === 0 && b.invMass === 0)) {
       continue;
     }
+
+    const options = {
+      restitution: Math.max(bodyRestitution(world, idA), bodyRestitution(world, idB)),
+      friction: Math.sqrt(bodyFriction(world, idA) * bodyFriction(world, idB)),
+    };
+
+    // Impact energy for material-driven fracture, only when a body can fracture.
+    const canFracture =
+      world.materialRefs.has(idA) || world.materialRefs.has(idB);
+    const impactEnergy = canFracture ? pairImpactEnergy(a, b) : 0;
+    let impactQueued = false;
 
     const compoundA = world.compoundColliders.get(idA);
     const compoundB = world.compoundColliders.get(idB);
@@ -93,6 +155,11 @@ export function resolveCollisions(world: SimWorld): void {
               b.orientation,
             );
             if (manifold) {
+              if (canFracture && !impactQueued) {
+                enqueueImpact(world, idA, idB, a, impactEnergy, manifold);
+                enqueueImpact(world, idB, idA, b, impactEnergy, manifold);
+                impactQueued = true;
+              }
               resolveContact(a, b, manifold, options);
             }
           }
@@ -115,6 +182,11 @@ export function resolveCollisions(world: SimWorld): void {
           )
         : sphereManifold(a, b);
     if (manifold) {
+      if (canFracture && !impactQueued) {
+        enqueueImpact(world, idA, idB, a, impactEnergy, manifold);
+        enqueueImpact(world, idB, idA, b, impactEnergy, manifold);
+        impactQueued = true;
+      }
       resolveContact(a, b, manifold, options);
     }
   }
