@@ -61,10 +61,13 @@
   "release": {
     "projects": [
       "@vanilla-slice/math",
+      "@vanilla-slice/materials",
       "@vanilla-slice/geometry",
       "@vanilla-slice/physics",
       "@vanilla-slice/spatial",
       "@vanilla-slice/slicing",
+      "@vanilla-slice/fracture",
+      "@vanilla-slice/interactions",
       "@vanilla-slice/core",
       "@vanilla-slice/renderer-three",
       "@vanilla-slice/runtime"
