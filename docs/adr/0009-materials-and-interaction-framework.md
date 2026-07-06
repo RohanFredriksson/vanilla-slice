@@ -172,7 +172,10 @@ interface Material {
                               // crack area); the initiation gate. The effective
                               // per-object threshold = toughness × collider size,
                               // derived at evaluation time (not stored).
-  brittleness: number;        // ductile↔brittle bias → fragment count / pattern
+  brittleness: number;        // ductile↔brittle bias → base fragment count
+  fracturePropagationFactor: number; // 0..1 how far a crack spreads: amplifies
+                              // fragment count with excess impact energy and the
+                              // spatial reach of seeds from the impact origin
 }
 
 interface MaterialLibrary {
@@ -193,7 +196,6 @@ material behaves correctly on small and large objects automatically.
 - `hardness` — needs a scratch/indentation model (Deformation milestone).
 - full `elasticity` / stiffness (stress–strain) — `restitution` is the M1 proxy;
   a real elastic model is deferred until Deformation.
-- `fracturePropagationFactor` — needs the propagation solver (Fracture M2).
 - anisotropy / grain direction, thermal properties, fatigue / accumulated
   damage, per-face material assignment — deferred until there is a concrete
   consumer.

@@ -4,7 +4,7 @@ import { createPlane, fromNormalAndPoint } from '@vanilla-slice/geometry';
 import { defineMaterial } from '@vanilla-slice/materials';
 import { createSliceVolume } from '@vanilla-slice/slicing';
 import { createWorld } from './world';
-import { fractureEntity, fractureCount } from './fracture-system';
+import { fractureEntity, buildFractureOptions } from './fracture-system';
 
 describe('fracture system', () => {
   it('registers the fracture processor for impact by default', () => {
@@ -12,10 +12,17 @@ describe('fracture system', () => {
     expect(world.interactionRegistry.has('impact')).toBe(true);
   });
 
-  it('scales fragment count with brittleness', () => {
-    expect(fractureCount(0)).toBe(2);
-    expect(fractureCount(1)).toBe(6);
-    expect(fractureCount(0.5)).toBe(4);
+  it('builds fracture options from material data (count + propagation)', () => {
+    const world = createWorld({
+      materials: [
+        defineMaterial('glass', { brittleness: 1, fracturePropagationFactor: 0.7 }),
+      ],
+    });
+    const id = world.spawn({ geometry: createBox(1, 1, 1), material: 'glass' });
+    const options = buildFractureOptions(world, id, world.materials.get('glass'));
+    expect(options.count).toBeGreaterThanOrEqual(2);
+    expect(options.propagation).toBe(0.7);
+    expect(options.seed).toBe(id);
   });
 
   it('fractures an entity into multiple fragment bodies', () => {

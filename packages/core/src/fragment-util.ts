@@ -2,17 +2,11 @@ import { Mat4 } from '@vanilla-slice/math';
 import { cloneMesh, transformMesh, computeVolume } from '@vanilla-slice/geometry';
 import type { Mesh } from '@vanilla-slice/geometry';
 import { getMass } from '@vanilla-slice/physics';
+import type { ConvexShape } from '@vanilla-slice/physics';
 import { recenterMesh, boundingRadius } from './mesh-util';
 import type { SimWorld, SliceOutcome, Vec3T, EntityId } from './types';
 
 const IDENTITY_SCALE: Vec3T = [1, 1, 1];
-
-/** A world-space fragment ready to become a body (produced by slice/fracture). */
-export interface SpawnableFragment {
-  mesh: Mesh;
-  centroid: Vec3T;
-  impulse: Vec3T;
-}
 
 /**
  * Transform an entity's local source mesh into world space, ready for a cut or
@@ -34,6 +28,19 @@ export function toWorldMesh(world: SimWorld, id: EntityId): Mesh | null {
   );
   transformMesh(worldMesh, xform);
   return worldMesh;
+}
+
+/** A world-space fragment ready to become a body (produced by slice/fracture). */
+export interface SpawnableFragment {
+  mesh: Mesh;
+  centroid: Vec3T;
+  impulse: Vec3T;
+  /**
+   * Convex collider in centroid-local space. Fragments are already convex, so
+   * slice/fracture precompute this; passing it lets `spawn` skip recomputing a
+   * convex hull (ROADMAP Phase 10.1).
+   */
+  hull?: ConvexShape;
 }
 
 /**
@@ -104,6 +111,7 @@ export function replaceWithFragments(
       angularVelocity: parentAngular,
       mass,
       radius: boundingRadius(localMesh),
+      ...(fragment.hull ? { collider: fragment.hull } : {}),
       ...(meshRef !== undefined ? { meshRef } : {}),
       ...(name !== undefined ? { name } : {}),
       ...(material !== undefined ? { material } : {}),

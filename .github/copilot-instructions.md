@@ -87,13 +87,13 @@ Light **Entity-Component-System (ECS)**:
 ## Materials & interaction model
 
 Behaviour is **data-driven** (ADR 0009): a `Material` (density, friction,
-restitution, toughness, brittleness), referenced by a `MaterialRef` component,
-decides how an object responds — "fruit slices, glass fractures, steel resists"
-follows from material data, never object-type branching. Collisions/gestures
-enqueue interaction events; the `InteractionSystem` drains them after the physics
-solve and dispatches to a processor: `event → resolve material → evaluate →
-apply`. `fractureThreshold = toughness × object size` gates fracture; there is no
-separate stored threshold.
+restitution, toughness, brittleness, fracturePropagationFactor), referenced by a
+`MaterialRef` component, decides how an object responds — "fruit slices, glass
+fractures, steel resists" follows from material data, never object-type branching.
+Collisions/gestures enqueue interaction events; the `InteractionSystem` drains
+them after the physics solve and dispatches to a processor: `event → resolve
+material → evaluate → apply`. `fractureThreshold = toughness × object size` gates
+fracture; there is no separate stored threshold.
 
 ## Slicing model
 

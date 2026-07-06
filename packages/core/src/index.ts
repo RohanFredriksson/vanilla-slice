@@ -30,6 +30,7 @@ export {
   DEFAULT_MATERIAL,
   massFromDensity,
   fractureThreshold,
+  fractureFragmentCount,
 } from '@vanilla-slice/materials';
 export type {
   InteractionType,

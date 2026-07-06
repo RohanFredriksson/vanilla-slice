@@ -33,6 +33,7 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
         toughness: 10,
         brittleness: 0.85,
         restitution: 0.1,
+        fracturePropagationFactor: 0.6,
       }),
       defineMaterial('steel', {
         density: 7.8,
@@ -101,6 +102,7 @@ export function startSpinningSlices(canvas: HTMLCanvasElement): SpinningSlicesHa
     position: [0, 3, 0],
     mass: 0,
     material: 'steel',
+    sliceable: false,
     tags: ['wall'],
   });
 

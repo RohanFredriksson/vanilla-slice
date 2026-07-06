@@ -130,7 +130,10 @@ export class World implements SimWorld {
     this.bodies.set(id, body);
 
     if (options.geometry) {
-      this.sliceables.set(id, { mesh: options.geometry, enabled: true });
+      this.sliceables.set(id, {
+        mesh: options.geometry,
+        enabled: options.sliceable ?? true,
+      });
     }
     if (options.material !== undefined) {
       this.materialRefs.set(id, { materialId: options.material });

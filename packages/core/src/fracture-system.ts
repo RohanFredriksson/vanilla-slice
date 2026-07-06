@@ -1,5 +1,7 @@
 import { fractureMesh } from '@vanilla-slice/fracture';
 import type { FractureOptions } from '@vanilla-slice/fracture';
+import { fractureFragmentCount } from '@vanilla-slice/materials';
+import type { Material } from '@vanilla-slice/materials';
 import type {
   InteractionContext,
   InteractionDecision,
@@ -11,17 +13,36 @@ import type { SimWorld, SliceOutcome, Vec3T, EntityId } from './types';
 
 /** Brittleness at or above which a slice shatters (fractures) instead of cutting. */
 export const BRITTLE_SLICE_CUTOFF = 0.5;
-/** Fragment count for the most brittle materials (brittleness = 1). */
-const MAX_BRITTLE_FRAGMENTS = 6;
+
+/** Optional impact context used to size and place a fracture. */
+export interface FractureImpact {
+  /** Impact energy; amplifies fragment count via the material's propagation. */
+  energy?: number;
+  /** World-space fracture origin (e.g. the contact point). */
+  origin?: Vec3T;
+}
 
 /**
- * Fragment count derived from a material's brittleness in `[0, 1]`: more brittle
- * materials shatter into more pieces. Ranges from 2 (barely brittle) to
- * {@link MAX_BRITTLE_FRAGMENTS}.
+ * Build fracture options for an entity from its material and (optional) impact
+ * data: fragment count comes from `fractureFragmentCount` (brittleness, energy,
+ * and propagation), the crack spreads per the material's
+ * `fracturePropagationFactor`, and the RNG is seeded by entity id for
+ * deterministic results (ADR 0009).
  */
-export function fractureCount(brittleness: number): number {
-  const b = Number.isFinite(brittleness) ? Math.min(Math.max(brittleness, 0), 1) : 0;
-  return 2 + Math.round(b * (MAX_BRITTLE_FRAGMENTS - 2));
+export function buildFractureOptions(
+  world: SimWorld,
+  id: EntityId,
+  material: Material,
+  impact: FractureImpact = {},
+): FractureOptions {
+  const size = world.bodies.get(id)?.radius ?? 1;
+  return {
+    count: fractureFragmentCount(material, size, impact.energy),
+    propagation: material.fracturePropagationFactor,
+    separationSpeed: world.config.sliceSeparationSpeed,
+    seed: id as number,
+    ...(impact.origin ? { origin: impact.origin } : {}),
+  };
 }
 
 /**
@@ -50,8 +71,8 @@ export function fractureEntity(
  * FractureProcessor — the fracture interaction (ADR 0009). Registered for
  * `impact` events (enqueued by the collision system when impact energy exceeds a
  * material's toughness threshold). The fracture origin is the contact point when
- * available, so pieces fly outward from the impact. Fragment count scales with
- * brittleness; the RNG is seeded by entity id for deterministic results.
+ * available, so pieces fly outward from the impact; impact energy and the
+ * material's propagation factor scale the fragment count.
  */
 export const fractureProcessor: InteractionProcessor<SimWorld> = {
   type: 'impact',
@@ -63,12 +84,14 @@ export const fractureProcessor: InteractionProcessor<SimWorld> = {
   },
   apply(ctx: InteractionContext<SimWorld>): InteractionOutcome {
     const { world, event, material } = ctx;
-    const origin = ctx.event.contact?.points[0]?.point as Vec3T | undefined;
-    return fractureEntity(world, event.entity, {
-      count: fractureCount(material.brittleness),
-      separationSpeed: world.config.sliceSeparationSpeed,
-      seed: event.entity as number,
-      ...(origin ? { origin } : {}),
-    });
+    const origin = event.contact?.points[0]?.point as Vec3T | undefined;
+    return fractureEntity(
+      world,
+      event.entity,
+      buildFractureOptions(world, event.entity, material, {
+        ...(event.energy !== undefined ? { energy: event.energy } : {}),
+        ...(origin ? { origin } : {}),
+      }),
+    );
   },
 };

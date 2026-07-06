@@ -102,6 +102,13 @@ export interface SpawnOptions {
   angularDamping?: number;
   /** Local-space source mesh; presence adds a {@link Sliceable} component. */
   geometry?: Mesh;
+  /**
+   * Set to `false` to make the body non-sliceable (and non-fracturable): it
+   * keeps its mesh and collider but slice/fracture interactions skip it — useful
+   * for ground, walls, and other fixtures. Defaults to `true`. Ignored when no
+   * `geometry` is given.
+   */
+  sliceable?: boolean;
   /** Render handle; presence adds a {@link Renderable} component. */
   meshRef?: string | number;
   /**

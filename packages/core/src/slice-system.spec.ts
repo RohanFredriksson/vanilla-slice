@@ -68,6 +68,26 @@ describe('World slicing (end-to-end)', () => {
     expect(world.has(far)).toBe(true);
   });
 
+  it('does not slice an entity spawned with sliceable: false', () => {
+    const world = createWorld({ gravity: [0, 0, 0] });
+    const ground = world.spawn({
+      geometry: createBox(),
+      position: [0, 0, 0],
+      mass: 0,
+      sliceable: false,
+    });
+    expect(world.sliceables.get(ground)!.enabled).toBe(false);
+
+    const plane = fromNormalAndPoint(createPlane(), [1, 0, 0], [0, 0, 0]);
+    const volume = createSliceVolume(plane, [0, 0, 0], 2);
+    const outcome = world.slice(volume);
+
+    // The fixture is left intact — no removal, no fragments.
+    expect(outcome.removed).toEqual([]);
+    expect(outcome.created).toEqual([]);
+    expect(world.has(ground)).toBe(true);
+  });
+
   it('supports unprojecting a screen ray for gesture input', () => {
     // Smoke test that the ray helper composes with world slicing inputs.
     const ray = rayFromNdc({ origin: [0, 0, 0], direction: [0, 0, -1] }, 0, 0, Mat4.create());

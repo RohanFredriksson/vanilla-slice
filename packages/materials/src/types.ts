@@ -37,4 +37,12 @@ export interface Material {
    * fracture engine (ADR 0009, ROADMAP Phase 10).
    */
   brittleness: number;
+  /**
+   * How readily a crack **propagates** through the body, in `[0, 1]`. `0` keeps
+   * fracture localized around the impact (fine shards near the hit, large chunks
+   * elsewhere); `1` lets the crack spread across the whole body and amplifies the
+   * fragment count with excess impact energy. Consumed by the fracture engine
+   * (ADR 0009, ROADMAP Phase 10).
+   */
+  fracturePropagationFactor: number;
 }

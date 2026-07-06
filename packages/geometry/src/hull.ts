@@ -375,6 +375,74 @@ export function computeConvexHull(mesh: Mesh, epsilon = DEFAULT_EPSILON): Convex
   return convexHullFromPoints(extractPoints(mesh, epsilon), epsilon);
 }
 
+/**
+ * Build a {@link ConvexHull} directly from a mesh that is **already convex** and
+ * closed (e.g. a slice or fracture fragment), skipping the Quickhull search: the
+ * mesh's surface triangles are taken as the hull faces (re-oriented outward using
+ * the centroid as an interior reference) and coplanar ones merged into polygons.
+ *
+ * Much cheaper than {@link computeConvexHull} when convexity is guaranteed — no
+ * incremental visibility search — so it is the fast path for runtime-generated
+ * fragments. **Do not** use it on concave meshes: the result would not be a
+ * valid convex hull.
+ */
+export function hullFromConvexMesh(mesh: Mesh, epsilon = DEFAULT_EPSILON): ConvexHull {
+  const inv = 1 / epsilon;
+  const { positions, indices } = mesh;
+  const points: Vec3T[] = [];
+  const lookup = new Map<string, number>();
+  const idxOf = (vertexIndex: number): number => {
+    const base = vertexIndex * 3;
+    const x = positions[base] ?? 0;
+    const y = positions[base + 1] ?? 0;
+    const z = positions[base + 2] ?? 0;
+    const key = `${Math.round(x * inv)}|${Math.round(y * inv)}|${Math.round(z * inv)}`;
+    let i = lookup.get(key);
+    if (i === undefined) {
+      i = points.length;
+      points.push([x, y, z]);
+      lookup.set(key, i);
+    }
+    return i;
+  };
+
+  const tris: Array<[number, number, number]> = [];
+  for (let t = 0; t + 2 < indices.length; t += 3) {
+    const a = idxOf(indices[t] ?? 0);
+    const b = idxOf(indices[t + 1] ?? 0);
+    const c = idxOf(indices[t + 2] ?? 0);
+    if (a !== b && b !== c && a !== c) {
+      tris.push([a, b, c]);
+    }
+  }
+  if (points.length < 4) {
+    return degenerateHull(points);
+  }
+
+  let cx = 0;
+  let cy = 0;
+  let cz = 0;
+  for (const p of points) {
+    cx += p[0];
+    cy += p[1];
+    cz += p[2];
+  }
+  const interior: Vec3T = [cx / points.length, cy / points.length, cz / points.length];
+
+  const seen = new Set<string>();
+  const faces: WorkFace[] = [];
+  for (const [a, b, c] of tris) {
+    const sorted = [a, b, c].sort((x, y) => x - y);
+    const key = `${sorted[0]}|${sorted[1]}|${sorted[2]}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    faces.push(makeFace(points, a, b, c, interior));
+  }
+  return finalize(points, faces);
+}
+
 /** Translate every hull vertex in place by `offset`. Returns the same hull. */
 export function translateHull(hull: ConvexHull, offset: ReadonlyVec3): ConvexHull {
   const { vertices } = hull;

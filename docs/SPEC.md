@@ -78,8 +78,8 @@ consume the engine; the engine is never a game itself.
 
 ### 5.8 Materials (data-driven behaviour)
 - FR-27: Describe physical properties as data via a `Material` (density,
-  friction, restitution, toughness, brittleness); a `MaterialLibrary` registers
-  and resolves materials by id.
+  friction, restitution, toughness, brittleness, fracturePropagationFactor); a
+  `MaterialLibrary` registers and resolves materials by id.
 - FR-28: Reference a material from an entity via a `MaterialRef` component;
   derive body mass from `density × volume` and combine per-body
   restitution/friction in contacts, falling back to defaults for materialless
@@ -97,8 +97,10 @@ consume the engine; the engine is never a game itself.
 - FR-32: Emit `impact` interaction events from collisions when impact energy
   exceeds a material's fracture threshold (`toughness × object size`).
 - FR-33: Fracture a mesh into fragments via Voronoi decomposition (runtime
-  generation, optional precomputed patterns, deterministic seeding); core spawns
-  the fragments and applies the impulses geometry computed.
+  generation, optional precomputed patterns, deterministic seeding); crack
+  propagation — fragment count and spatial reach — is driven by material data
+  (`fracturePropagationFactor`) and impact energy; core spawns the fragments and
+  applies the impulses geometry computed.
 
 ## 6. Non-Functional Requirements
 

@@ -1,4 +1,4 @@
-import type { Mesh } from '@vanilla-slice/geometry';
+import type { Mesh, ConvexHull } from '@vanilla-slice/geometry';
 
 /** Mutable 3-component vector (matches `@vanilla-slice/math`'s `Vec3`). */
 export type Vec3T = [number, number, number];
@@ -12,6 +12,12 @@ export interface FractureFragment {
   mesh: Mesh;
   centroid: Vec3T;
   impulse: Vec3T;
+  /**
+   * Convex hull of the piece in centroid-local space, ready to serve as the
+   * collider for a body spawned at `centroid` with identity orientation — lets
+   * the consumer skip recomputing a hull (fragments are already convex).
+   */
+  hull: ConvexHull;
 }
 
 /**
@@ -39,6 +45,14 @@ export interface FractureOptions {
   count?: number;
   /** Deterministic RNG seed for random seed generation (ADR 0005 determinism). */
   seed?: number;
+  /**
+   * How far cracks propagate from the fracture origin, in `[0, 1]` (defaults to
+   * `1`). `1` spreads random seeds uniformly across the mesh; lower values
+   * cluster them near the `origin`, so damage is fine near the impact and coarse
+   * elsewhere. Only affects randomly generated seeds (not explicit `seeds` or a
+   * `pattern`).
+   */
+  propagation?: number;
   /** Point the fragments fly away from; defaults to the mesh centroid. */
   origin?: Vec3T;
   /** Radial separation speed applied to each fragment. */

@@ -3,7 +3,7 @@ import {
   splitMeshByPlane,
   vertexCount,
   getVertex,
-  computeConvexHull,
+  hullFromConvexMesh,
   translateHull,
 } from '@vanilla-slice/geometry';
 import type { Mesh, ConvexHull } from '@vanilla-slice/geometry';
@@ -110,6 +110,7 @@ export function sliceMesh(
 
 /** Convex hull of `mesh` expressed relative to `centroid` (centroid-local space). */
 function localHull(mesh: Mesh, centroid: Vec3T): ConvexHull {
-  const hull = computeConvexHull(mesh);
+  // Slice pieces are convex, so use the cheap fast path (no Quickhull search).
+  const hull = hullFromConvexMesh(mesh);
   return translateHull(hull, [-centroid[0], -centroid[1], -centroid[2]]);
 }

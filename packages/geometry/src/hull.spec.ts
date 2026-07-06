@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createBox } from './primitives';
 import { createMesh, vertexCount } from './mesh';
+import { splitMeshByPlane } from './split';
 import {
   computeConvexHull,
   convexHullFromPoints,
+  hullFromConvexMesh,
   translateHull,
 } from './hull';
 import type { ConvexHull } from './hull';
@@ -107,5 +109,45 @@ describe('convex hull', () => {
     for (let i = 0; i < hull.vertices.length; i += 3) {
       expect(hull.vertices[i]).toBeGreaterThanOrEqual(10);
     }
+  });
+});
+
+describe('hullFromConvexMesh', () => {
+  it('matches computeConvexHull on a box (8 verts, 6 polygons, contains all points)', () => {
+    const box = createBox(2, 2, 2);
+    const fast = hullFromConvexMesh(box);
+    const full = computeConvexHull(box);
+    expect(fast.vertices.length / 3).toBe(8);
+    expect(fast.faces.length).toBe(full.faces.length); // 12 triangles
+    expect(fast.polygons.length).toBe(6); // one quad per box face
+    // Every box vertex lies inside (on) the fast hull.
+    expect(maxOutside(fast, box.positions)).toBeLessThan(1e-6);
+  });
+
+  it('produces outward-facing unit normals', () => {
+    const hull = hullFromConvexMesh(createBox(1, 1, 1));
+    for (const face of hull.faces) {
+      expect(Math.hypot(...face.normal)).toBeCloseTo(1);
+      const [ia] = face.indices;
+      const dot =
+        face.normal[0] * hull.vertices[ia * 3]! +
+        face.normal[1] * hull.vertices[ia * 3 + 1]! +
+        face.normal[2] * hull.vertices[ia * 3 + 2]!;
+      expect(dot).toBeGreaterThan(0); // box centered at origin
+    }
+  });
+
+  it('builds a valid convex hull from a clipped (still convex) fragment', () => {
+    // Cut a box; the front piece is convex — the fast path must contain it.
+    const { front } = splitMeshByPlane(
+      createBox(2, 2, 2),
+      { normal: [1, 0, 0], constant: 0 },
+      { cap: true },
+    );
+    expect(front).not.toBeNull();
+    const hull = hullFromConvexMesh(front!);
+    expect(hull.vertices.length / 3).toBeGreaterThanOrEqual(4);
+    expect(hull.faces.length).toBeGreaterThan(0);
+    expect(maxOutside(hull, front!.positions)).toBeLessThan(1e-6);
   });
 });

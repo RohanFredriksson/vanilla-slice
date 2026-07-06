@@ -253,8 +253,9 @@ plus `core` orchestration (ADR 0009).
 ### 9.1 Responsibilities
 
 - **`materials` (leaf).** Pure data: `Material` records (density, friction,
-  restitution, toughness, brittleness), a `MaterialLibrary` registry, and derived
-  helpers (`massFromDensity`, `fractureThreshold`). No behaviour. Entities carry a
+  restitution, toughness, brittleness, fracturePropagationFactor), a
+  `MaterialLibrary` registry, and derived helpers (`massFromDensity`,
+  `fractureThreshold`, `fractureFragmentCount`). No behaviour. Entities carry a
   lightweight `MaterialRef` component (a material id); the world resolves it to a
   `Material`, deriving body mass from `density × volume` and combining per-body
   restitution/friction in contacts.
@@ -264,9 +265,10 @@ plus `core` orchestration (ADR 0009).
   the material-evaluation glue (`exceedsFractureThreshold`). No concrete
   world-mutating processors — so it never depends on `core` (avoids a cycle).
 - **`fracture` (sibling of `slicing`).** Pure geometry: Voronoi cell generation
-  by iterative bisector clipping, optional precomputed/normalized patterns, and a
-  deterministic seeded RNG → fragment meshes + radial impulses. Owns no world
-  state and applies no impulses (as with `slicing`).
+  by iterative bisector clipping, optional precomputed/normalized patterns,
+  propagation-controlled seed clustering (localized shatter vs cracks that spread
+  across the body), and a deterministic seeded RNG → fragment meshes + radial
+  impulses. Owns no world state and applies no impulses (as with `slicing`).
 - **`core` (orchestration).** Owns the concrete processors — `SliceProcessor`
   and `FractureProcessor` — that adapt `slicing`/`fracture` into the framework and
   perform spawn/despawn (a shared `replaceWithFragments` helper distributes mass,

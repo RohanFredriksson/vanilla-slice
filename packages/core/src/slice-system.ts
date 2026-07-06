@@ -12,7 +12,7 @@ import type {
 } from '@vanilla-slice/interactions';
 import { toWorldMesh, replaceWithFragments } from './fragment-util';
 import { processInteractions } from './interaction-system';
-import { fractureEntity, fractureCount, BRITTLE_SLICE_CUTOFF } from './fracture-system';
+import { fractureEntity, buildFractureOptions, BRITTLE_SLICE_CUTOFF } from './fracture-system';
 import type { SimWorld, SliceOutcome, EntityId } from './types';
 
 /** Options for a slice operation. */
@@ -76,11 +76,11 @@ export const sliceProcessor: InteractionProcessor<SimWorld> = {
     const { world, event, material } = ctx;
     const payload = event.payload as SlicePayload;
     if (material.brittleness >= BRITTLE_SLICE_CUTOFF) {
-      return fractureEntity(world, event.entity, {
-        count: fractureCount(material.brittleness),
-        separationSpeed: payload.separationSpeed,
-        seed: event.entity as number,
-      });
+      return fractureEntity(
+        world,
+        event.entity,
+        buildFractureOptions(world, event.entity, material),
+      );
     }
     return sliceEntity(
       world,

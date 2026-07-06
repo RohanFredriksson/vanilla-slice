@@ -160,16 +160,100 @@ Real-time, material-driven fragmentation. **Depends on Phases 8 and 9.**
       `impact`, origin = contact point) and slice-driven (brittle materials
       shatter) fracture gated by material thresholds; spawns fragments + applies
       impulses via the shared `replaceWithFragments` helper (core owns lifecycle).
-- [x] Configurable fracture thresholds (via `toughness`) and fragment count (via
-      `brittleness`), all data-driven. Propagation solver still deferred.
+
+- [x] Configurable fracture thresholds (via `toughness`), fragment count (via
+      `brittleness`), and crack propagation (via `fracturePropagationFactor`:
+      energy-amplified fragment count + origin-clustered seed distribution), all
+      data-driven.
 - [x] Performance guards: per-event fragment budget/cap (`MAX_SEEDS`),
       deterministic RNG, depth-limited (single-pass) generation. Profiling
       against the "hundreds of objects" goal still to do.
-- [ ] Defer runtime optimisation strategies (off-thread generation, richer
-      propagation) to a follow-up.
+- [ ] Defer richer fracture propagation (recursive/energy-attenuated) to a
+      follow-up.
 - [x] End-to-end demo validation: `spinning-slices` launches glass cubes at a
       static steel slab; glass shatters into Voronoi fragments on impact, steel
       resists — the full collision → impact → material → fracture path, rendered.
+
+## Phase 10.1 — Fracture performance (profiled) — RESOLVED
+
+**Decision (2026-07-06):** instant, deterministic shattering on collision is a
+**hard requirement**. The residual worst-case single-frame spike is **accepted**:
+it is only reached by extreme materials (very brittle + high propagation taking a
+violent hit) and is a rare, one-frame cost. Time-slicing and off-thread fracture
+were evaluated and **rejected** for changing the feel (delay) or the look
+(pop-in); the exact algorithmic win (neighbour-limited Voronoi) and collider
+reuse are shipped.
+
+Motivation: `spinning-slices` showed a brief stutter each time an object
+shattered. Profiled 2026-07-06 (CDP CPU profile + rAF frame-timing + headless
+micro-benchmarks):
+
+- Frame times are a locked 16.8 ms except single-frame spikes of **~50–83 ms** —
+  one per shatter. A transient per-shatter spike, not a sustained regression.
+- Headless timing pinned the cause: the demo shatter spawns **~23 fragments** in
+  one frame (propagation amplified the count), and `fractureMesh` is **O(n²)** in
+  fragment count (each Voronoi cell clips against every other seed):
+
+  | fragments | `fractureMesh` |
+  | --------- | -------------- |
+  | 8         | ~9 ms          |
+  | 16        | ~27 ms         |
+  | 23        | ~55 ms         |
+  | 32        | ~120 ms        |
+
+  So the 23-fragment shatter is ~55 ms of clipping + ~30 ms for the 23 spawns.
+- **Correction to the earlier hypothesis:** the per-fragment convex hull is *not*
+  a hotspot (~0.27 ms/fragment; `hullFromConvexMesh` measured no faster than
+  `computeConvexHull`). Fragment **count × O(n²) clipping** is the driver.
+- **The demo is a near-worst case.** Fragment count is
+  `round(base × amplify)` where `base = 2 + round(brittleness×4)` and
+  `amplify = 1 + propagation × min(excess, 6)`. The demo's glass stacks all
+  multipliers (brittleness 0.85, propagation 0.6, a violent hit ⇒ excess ≈ 8),
+  giving ~23 fragments. Typical fractures (tougher/less brittle materials, softer
+  hits, lower propagation) produce **~5–10 fragments ≈ 7–13 ms** — a small blip,
+  not a stutter. The ~43 ms spike is the ceiling for one object, rarely reached.
+
+Work (done + planned):
+
+- [x] **Reuse fragment colliders.** `hullFromConvexMesh` fast path (geometry);
+      `slicing` and `fracture` emit each fragment's centroid-local hull; core
+      passes it via `SpawnOptions.collider` so `spawn` skips `computeConvexHull`.
+      Removes `slicing`'s double hull compute; neutral for fracture. (Not the
+      spike fix, but a clean win — kept.)
+- [x] **Neighbour-limited Voronoi — the chosen fix (exact optimisation).** For
+      each cell, visit the other seeds in order of increasing distance and stop
+      clipping once the nearest remaining bisector can no longer reach the
+      shrinking cell (`distance / 2 >= cell radius`). A farther seed's bisector
+      lies entirely outside the cell, so skipping it yields the **same geometry**
+      as clipping against every seed — no approximation, no fragment overlap —
+      while cutting the O(n²) clip toward ~O(n·k). Fully deterministic; all
+      existing fracture tests pass unchanged. Measured on the demo's clustered
+      23-fragment shatter: `fractureMesh` ~55 ms → ~43 ms; larger gains for more
+      spread (higher-propagation) seed distributions. Fracture stays a single,
+      immediate operation.
+- [x] **Time-slicing — tried and REJECTED.** A `fractureBudget` spread each
+      shatter's generation across frames. It removed the frame spike but the
+      result looked and felt wrong (collisions felt delayed; the object popped /
+      transitioned awkwardly as fragments trickled in), so it was scrapped
+      entirely — the engine only ships behaviour we can fully back. Fracture is
+      always immediate.
+Remaining levers were considered and **deliberately not applied** (they would
+compromise instant shattering, detail, or determinism for a rare worst case):
+
+- [ ] **Cap fragment count for realtime (rejected for now).** Lowering
+      `MAX_FRACTURE_FRAGMENTS` / the propagation amplification would cut the
+      residual spike but trades away shatter detail. Left as a tuning knob.
+- [ ] **Off-thread fracture (rejected for now).** A Web Worker keeps the
+      framerate smooth and swaps atomically (no pop-in), but still delays the
+      shatter by the compute time (~the same latency), breaks the synchronous
+      per-frame determinism model (ADR 0005), and — being a browser API — cannot
+      live in the headless core (it would sit in the app/runtime layer). Not
+      worth it to hide a rare one-frame cost.
+- [ ] **Fewer allocations.** Pool `MeshBuilder`/clone buffers to cut GC on
+      shatter frames. (Minor; still open as a low-risk future cleanup.)
+- [ ] **Sustained-scaling follow-up (separate from the jank).** `syncSpatial`
+      re-`insert`s every body every frame; skip static/sleeping bodies. Pairs
+      with the deferred DDA broad-phase (Phase 7).
 
 ## AI-DLC operating cadence
 - Break phases into small issues on the board:
