@@ -1,3 +1,17 @@
+## 0.1.7 (2026-07-06)
+
+### 🚀 Features
+
+- rendering capabilities and uv mapping inside cut surfaces ([d97ea02](https://github.com/RohanFredriksson/vanilla-slice/commit/d97ea02))
+
+### 🩹 Fixes
+
+- for failing build ([7bc1204](https://github.com/RohanFredriksson/vanilla-slice/commit/7bc1204))
+
+### ❤️ Thank You
+
+- Rohan Fredriksson
+
 ## 0.1.6 (2026-07-06)
 
 ### 🩹 Fixes
