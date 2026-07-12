@@ -59,6 +59,7 @@ function resolveConfig(config: WorldConfig): ResolvedConfig {
     restitution: config.restitution ?? 0,
     friction: config.friction ?? 0.5,
     decomposeColliders: config.decomposeColliders ?? false,
+    tipFactor: config.tipFactor ?? 12,
   };
 }
 

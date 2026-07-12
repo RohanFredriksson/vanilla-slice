@@ -152,3 +152,42 @@ or a compound of hulls rather than failing.
   arguably simpler to stabilise, but diverges from the existing
   velocity/impulse-based model (`applyImpulse`, `resolveHalfSpace`); deferred as
   a possible future ADR rather than adopted now.
+
+## Amendment — hull-footprint tipping on the ground half-space (2026-07-11)
+
+The original `resolveHalfSpace` treats every body as a **bounding sphere**: the
+ground's normal-force correction always passes through the centroid, so the
+ground can never exert a *toppling* torque. Tall or narrow pieces — including
+slice/fracture fragments — stand upright forever even when their centre of mass
+projects well outside their base, which reads as unphysical in the demos.
+
+Decision: `resolveHalfSpace` gains two optional parameters,
+`collider?: ConvexShape` and `tipFactor = 12`, and grows a **support-polygon**
+path on top of the existing sphere correction (which is unchanged and still
+applied):
+
+- The collider's vertices are transformed into world space; those within
+  `CONTACT_EPSILON` (`0.05`) of the surface form the **contact set**.
+- With ≥ 3 contacts, their footprint is projected into the ground plane's 2D
+  basis and reduced to a **convex support polygon** (monotone-chain hull).
+- If the body's centre of mass projects **inside** the polygon it is stable and
+  nothing extra happens. If it projects **outside**, a destabilising angular
+  impulse is applied about `normal × overhang` (overhang = direction from the
+  nearest support edge toward the COM), scaled by
+  `overhangDistance × tipFactor × dt`, so the body topples over that edge.
+- It **falls back to the sphere correction** when no collider is supplied or the
+  contact set has fewer than three vertices; `tipFactor = 0` disables tipping.
+
+Wiring: `WorldConfig`/`ResolvedConfig` gain `tipFactor` (default `12`);
+`stepPhysics` iterates `world.bodies.entries()` and passes each body's collider
+(`world.colliders.get(id)`) and the world `tipFactor` into `resolveHalfSpace`.
+Because `resolveHalfSpace`'s signature carries no timestep, the impulse folds a
+fixed `1/60` `dt` estimate into the magnitude — `tipFactor` is the intended
+tuning knob, so the exact `dt` is immaterial.
+
+Consequences: bodies resting on the ground now tip realistically at negligible
+cost (the hull scan runs only for grounded bodies with a collider); static
+bodies (`invMass === 0`) are unaffected (early-out preserved); materialless and
+colliderless bodies keep their previous sphere behaviour exactly. This extends,
+and does not reverse, the ADR's collision model — it is a signature change to a
+physics helper, acceptable at the current `0.x` stage (ADR 0008).

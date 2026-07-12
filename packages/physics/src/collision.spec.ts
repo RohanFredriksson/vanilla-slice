@@ -9,6 +9,7 @@ import {
 import { sphereSphereContact, resolveHalfSpace } from './collision';
 import { isOutOfBounds } from './cleanup';
 import { createBody } from './body';
+import type { ConvexShape } from './convex';
 
 describe('Aabb', () => {
   it('builds from center and half-extents', () => {
@@ -66,6 +67,57 @@ describe('collision', () => {
   it('does nothing when the body is above the surface', () => {
     const body = createBody({ position: [0, 5, 0], radius: 0 });
     expect(resolveHalfSpace(body, [0, 1, 0], 0, 0.5)).toBe(false);
+  });
+});
+
+/** Box collider (8 corners) with the given half-extents, centred at local (cx, 0, cz). */
+function boxCollider(hx: number, hy: number, hz: number, cx = 0, cz = 0): ConvexShape {
+  const vertices: number[] = [];
+  for (const x of [cx - hx, cx + hx]) {
+    for (const y of [-hy, hy]) {
+      for (const z of [cz - hz, cz + hz]) {
+        vertices.push(x, y, z);
+      }
+    }
+  }
+  return { vertices };
+}
+
+describe('resolveHalfSpace tipping', () => {
+  it('leaves a balanced tall box stable (COM inside the support polygon)', () => {
+    // 0.5×3×0.5 box resting with its base on the ground; COM over the centre.
+    const box = boxCollider(0.25, 1.5, 0.25);
+    const body = createBody({ position: [0, 1.5, 0], radius: 0.25 });
+    resolveHalfSpace(body, [0, 1, 0], 0, 0, box, 12);
+    expect(body.angularVelocity).toEqual([0, 0, 0]);
+  });
+
+  it('tips a box whose COM projects outside the support polygon', () => {
+    // Base offset so the footprint sits at world x∈[-0.25,0.25] while the COM is
+    // at x=0.5 — a quarter-unit past the +X support edge.
+    const box = boxCollider(0.25, 1.5, 0.25, -0.5);
+    const body = createBody({ position: [0.5, 1.5, 0], radius: 0.25 });
+    const resolved = resolveHalfSpace(body, [0, 1, 0], 0, 0, box, 12);
+    expect(resolved).toBe(true);
+    // Overhang is +X, so the body topples about the Z axis.
+    expect(Math.abs(body.angularVelocity[2])).toBeGreaterThan(0);
+    expect(body.angularVelocity[0]).toBeCloseTo(0, 10);
+    expect(body.angularVelocity[1]).toBeCloseTo(0, 10);
+  });
+
+  it('never tips a static body even when the COM is outside the footprint', () => {
+    const box = boxCollider(0.25, 1.5, 0.25, -0.5);
+    const body = createBody({ position: [0.5, 1.5, 0], mass: 0, radius: 0.25 });
+    const resolved = resolveHalfSpace(body, [0, 1, 0], 0, 0, box, 12);
+    expect(resolved).toBe(false);
+    expect(body.angularVelocity).toEqual([0, 0, 0]);
+  });
+
+  it('falls back to sphere behaviour when no collider is supplied', () => {
+    const body = createBody({ position: [0, -1, 0], velocity: [0, -5, 0], radius: 0 });
+    expect(() => resolveHalfSpace(body, [0, 1, 0], 0, 0.5)).not.toThrow();
+    expect(body.position[1]).toBeCloseTo(0, 10);
+    expect(body.angularVelocity).toEqual([0, 0, 0]);
   });
 });
 

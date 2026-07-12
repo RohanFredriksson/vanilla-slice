@@ -21,10 +21,17 @@ import type { ConvexShape } from '@vanilla-slice/physics';
  */
 export function stepPhysics(world: SimWorld, dt: number): void {
   const { gravity, ground } = world.config;
-  for (const body of world.bodies.values()) {
+  for (const [id, body] of world.bodies.entries()) {
     integrateBody(body, gravity, dt);
     if (ground) {
-      resolveHalfSpace(body, ground.normal, ground.offset, ground.restitution ?? 0);
+      resolveHalfSpace(
+        body,
+        ground.normal,
+        ground.offset,
+        ground.restitution ?? 0,
+        world.colliders.get(id),
+        world.config.tipFactor,
+      );
     }
   }
   if (world.config.collisions) {

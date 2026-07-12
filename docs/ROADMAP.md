@@ -82,6 +82,10 @@ Run the demos in a browser (Vite dev server; engine packages resolve to source):
   - [x] `resolveCollisions(world)` system wired into `stepPhysics`, on by default
         with a per-world / per-body opt-out (`collides`).
   - [x] Optional approximate convex decomposition for concave meshes.
+  - [x] Hull-footprint tipping on the ground half-space (ADR 0007 amendment):
+        `resolveHalfSpace` uses the body's convex-hull contact set to build a
+        support polygon and applies a toppling angular impulse (`tipFactor`,
+        default 12) when the COM projects outside it; sphere fallback otherwise.
   - [x] Verify `spinning-slices` (objects no longer phase through); profile and
         tune against the "hundreds of objects" goal.
 - [ ] Performance passes (allocation profiling, spatial tuning).

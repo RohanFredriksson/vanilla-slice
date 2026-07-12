@@ -71,6 +71,8 @@ export interface WorldConfig {
    * as compounds of convex hulls. Defaults to `false` (single hull per body).
    */
   decomposeColliders?: boolean;
+  /** Angular impulse scale for tipping unstable bodies. 0 disables it. Default 12. */
+  tipFactor?: number;
 }
 
 /** Fully-resolved configuration with all defaults applied. */
@@ -86,6 +88,7 @@ export interface ResolvedConfig {
   restitution: number;
   friction: number;
   decomposeColliders: boolean;
+  tipFactor: number;
 }
 
 /** Options for spawning an entity. */

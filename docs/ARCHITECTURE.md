@@ -141,7 +141,9 @@ classDiagram
 ```
 
 ### Systems
-- **PhysicsSystem** — gravity, integration, rigid bodies.
+- **PhysicsSystem** — gravity, integration, rigid bodies, and the ground
+  half-space. Grounded bodies with a collider tip/topple via their convex-hull
+  support polygon (ADR 0007 amendment); others fall back to the bounding sphere.
 - **CollisionSystem** — narrow-phase + contact resolution; emits `impact`
   interaction events when energy exceeds a material's fracture threshold.
 - **SpatialSystem** — maintains broad-phase structure; answers region queries.
