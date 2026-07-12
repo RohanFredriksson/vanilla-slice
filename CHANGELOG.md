@@ -1,3 +1,13 @@
+## 0.1.8 (2026-07-12)
+
+### 🚀 Features
+
+- tipping/toppling physics for grounded bodies ([98092ad](https://github.com/RohanFredriksson/vanilla-slice/commit/98092ad))
+
+### ❤️ Thank You
+
+- Rohan Fredriksson
+
 ## 0.1.7 (2026-07-06)
 
 ### 🚀 Features

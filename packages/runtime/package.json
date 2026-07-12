@@ -1,6 +1,6 @@
 {
   "name": "@vanilla-slice/runtime",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Framework-agnostic engine loop and swipe-to-slice input for the Vanilla Slice engine.",
   "keywords": [
     "vanilla-slice",

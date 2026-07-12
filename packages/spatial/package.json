@@ -1,6 +1,6 @@
 {
   "name": "@vanilla-slice/spatial",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Spatial hashing and broad-phase queries for the Vanilla Slice engine.",
   "keywords": [
     "vanilla-slice",
