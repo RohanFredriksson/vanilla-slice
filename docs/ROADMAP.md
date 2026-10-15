@@ -258,8 +258,9 @@ compromise instant shattering, detail, or determinism for a rare worst case):
       worth it to hide a rare one-frame cost.
 - [ ] **Fewer allocations.** Pool `MeshBuilder`/clone buffers to cut GC on
       shatter frames. (Minor; still open as a low-risk future cleanup.)
-- [ ] **Sustained-scaling follow-up (separate from the jank).** `syncSpatial`
-      re-`insert`s every body every frame; skip static/sleeping bodies. Pairs
+- [x] **Sustained-scaling follow-up (separate from the jank).** `syncSpatial`
+      now skips bodies whose position and radius are unchanged since their last
+      insert (static or at rest); exact, no behaviour change. Pairs
       with the deferred DDA broad-phase (Phase 7).
 
 ## Phase 11 — Textured Cut & Fracture Surfaces (ADR 0010, proposed)

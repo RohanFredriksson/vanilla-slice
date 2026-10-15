@@ -323,7 +323,8 @@ export function resolveCollisions(world: SimWorld): void {
 
 /**
  * SpatialSystem — refresh each body's placement in the broad-phase hash so slice
- * and neighbor queries reflect the current frame.
+ * and neighbor queries reflect the current frame. Bodies whose position and
+ * radius are unchanged since their last insert are skipped.
  */
 export function syncSpatial(world: SimWorld): void {
   for (const [id, body] of world.bodies) {
@@ -332,9 +333,30 @@ export function syncSpatial(world: SimWorld): void {
     if (isDissolving(world, id)) {
       continue;
     }
+    // The placement depends only on position and radius, so a body that has not
+    // moved since its last insert (static, or at rest) is already correct.
+    let last = lastInserted.get(body);
+    if (last === undefined) {
+      last = new Float64Array(4);
+      lastInserted.set(body, last);
+    } else if (
+      last[0] === body.position[0] &&
+      last[1] === body.position[1] &&
+      last[2] === body.position[2] &&
+      last[3] === body.radius
+    ) {
+      continue;
+    }
+    last[0] = body.position[0];
+    last[1] = body.position[1];
+    last[2] = body.position[2];
+    last[3] = body.radius;
     insert(world.spatial, id, sphereAabb(body.position, body.radius));
   }
 }
+
+/** Position + radius each body was last placed in the broad-phase with. */
+const lastInserted = new WeakMap<object, Float64Array>();
 
 /**
  * CleanupSystem — remove bodies that have left the simulation bounds (fallen or
