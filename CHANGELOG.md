@@ -1,3 +1,15 @@
+## 0.1.9 (2026-10-15)
+
+### 🚀 Features
+
+- **core:** small-fragment culling with shrink-dissolve and ground-impact fracture ([c742b63](https://github.com/RohanFredriksson/vanilla-slice/commit/c742b63))
+- **physics:** ground stability and impact handling for grounded bodies ([0054c99](https://github.com/RohanFredriksson/vanilla-slice/commit/0054c99))
+
+### ❤️ Thank You
+
+- Claude Sonnet 5.5
+- Rohan Fredriksson
+
 ## 0.1.8 (2026-07-12)
 
 ### 🚀 Features
