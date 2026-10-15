@@ -105,7 +105,7 @@ Run the demos in a browser (Vite dev server; engine packages resolve to source):
   - [x] ADR 0008 recording the versioning/publishing strategy.
   - [x] Add `repository`/`homepage`/`bugs`/`author` + `LICENSE` file (MIT,
         Rohan Fredriksson); tarballs ship `dist` JS + types only.
-  - [ ] Optional per-package `README.md` for npm pages.
+  - [x] Per-package `README.md` for npm pages (install, overview, verified example).
   - [ ] Decide `1.0.0` criteria and cut it once the API has settled.
 - [ ] npm publishing pipeline for packages (CI + registry auth + provenance).
   - [x] `Release` GitHub Actions workflow on push to `master`: Conventional
