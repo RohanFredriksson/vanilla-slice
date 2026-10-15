@@ -1,6 +1,10 @@
 import { Vec3 } from '@vanilla-slice/math';
 import type { ReadonlyVec3 } from '@vanilla-slice/math';
-import { isStatic, applyAngularImpulse } from './body';
+import {
+  isStatic,
+  applyImpulseAtPoint,
+  worldInvInertiaMultiply,
+} from './body';
 import type { RigidBody } from './body';
 import type { ConvexShape } from './convex';
 
@@ -42,25 +46,50 @@ export function sphereSphereContact(
 /** Vertices within this distance of the surface count as ground contacts. */
 const CONTACT_EPSILON = 0.05;
 /**
- * Timestep estimate used to scale the tipping angular impulse. The tip strength
- * is a tunable (`tipFactor`), so an exact `dt` is not needed here.
+ * Maximum angular speed (rad/s) the tipping heuristic will drive about the tip
+ * axis. Caps the topple so unbalanced pieces fall over without gaining spin.
  */
-const TIP_DT_ESTIMATE = 1 / 60;
+const MAX_TIP_OMEGA = 7;
+/**
+ * Minimum spin (rad/s) the tip commits to once a piece is clearly overhanging.
+ * Without a floor the target scales with the (initially tiny) overhang, so a
+ * piece would creep before committing — real toppling snaps over immediately
+ * once the centre of mass passes the support edge.
+ */
+const MIN_TIP_OMEGA = 2.5;
+/**
+ * Overhang (world units) below which a piece counts as balanced and is not
+ * tipped. Prevents jitter-tipping of pieces resting right on their edge.
+ */
+const TIP_OVERHANG_DEADZONE = 0.01;
+/** Angular speed (rad/s) the tip adds per step — a brisk, gravity-like snap. */
+const TIP_RAMP_PER_STEP = 0.6;
+/**
+ * Squared linear speed above which a body is treated as "in motion" and never
+ * tipped. Tipping models gravity toppling a settled object; adding spin to a
+ * bouncing piece would pump energy through the ground contact and fling it off.
+ */
+const TIP_REST_SPEED_SQ = 2.25;
 
 /**
  * Resolve a dynamic body against a static half-space `dot(normal, p) >= offset`.
  * Pushes the body out of penetration and reflects the inbound normal velocity
  * with the given `restitution` (0 = no bounce, 1 = perfectly elastic).
  *
- * The body's `radius` is treated as an offset from its center to the surface.
+ * When a `collider` is supplied, the body's actual convex hull is used for the
+ * contact: the deepest hull vertex determines the push-out (so pieces rest on
+ * their real geometry instead of hovering at their bounding-sphere radius), and
+ * a non-penetration impulse is applied at each contacting vertex — because the
+ * impulses act at the true contact points, tilted pieces gain the angular
+ * response needed to settle flat and topple over edges. The collider is also
+ * used to detect the ground-contact footprint (support polygon); if the centre
+ * of mass projects outside that footprint, a destabilising angular impulse
+ * (scaled by `tipFactor`) is applied so tall/unbalanced pieces topple over the
+ * nearest support edge instead of standing forever. Set `tipFactor` to `0` to
+ * disable. Falls back to the sphere-based correction when no collider is given.
  *
- * When a `collider` is supplied, the body's actual convex hull is used to detect
- * the ground-contact footprint (support polygon). If the centre of mass projects
- * outside that footprint, a destabilising angular impulse (scaled by
- * `tipFactor`) is applied so tall/unbalanced pieces topple over the nearest
- * support edge instead of standing forever. Set `tipFactor` to `0` to disable.
- * Falls back to the sphere-based correction when the collider is absent or the
- * contact set has fewer than three vertices.
+ * The body's `radius` is treated as an offset from its center to the surface for
+ * the sphere fallback.
  *
  * Returns `true` when a collision was resolved.
  */
@@ -76,30 +105,151 @@ export function resolveHalfSpace(
     return false;
   }
 
-  const distance = Vec3.dot(normal, body.position) - offset - body.radius;
-  let resolved = false;
-  if (distance < 0) {
-    // Push the body out along the normal so it rests on the surface.
-    Vec3.scaleAndAdd(body.position, body.position, normal, -distance);
-
-    // Reflect the velocity component moving into the surface.
-    const normalVelocity = Vec3.dot(body.velocity, normal);
-    if (normalVelocity < 0) {
-      Vec3.scaleAndAdd(
-        body.velocity,
-        body.velocity,
-        normal,
-        -(1 + restitution) * normalVelocity,
-      );
-    }
-    resolved = true;
-  }
+  let resolved = collider
+    ? resolveHalfSpaceConvex(body, normal, offset, restitution, collider)
+    : resolveHalfSpaceSphere(body, normal, offset, restitution);
 
   if (collider && tipFactor !== 0 && applyTippingTorque(body, normal, offset, collider, tipFactor)) {
     resolved = true;
   }
 
   return resolved;
+}
+
+/**
+ * Sphere-based half-space resolution: the body's `radius` is the offset from its
+ * center to the surface. Pushes the center out to `offset + radius` and reflects
+ * the inbound normal velocity of the centre of mass.
+ */
+function resolveHalfSpaceSphere(
+  body: RigidBody,
+  normal: ReadonlyVec3,
+  offset: number,
+  restitution: number,
+): boolean {
+  const distance = Vec3.dot(normal, body.position) - offset - body.radius;
+  if (distance >= 0) {
+    return false;
+  }
+  // Push the body out along the normal so it rests on the surface.
+  Vec3.scaleAndAdd(body.position, body.position, normal, -distance);
+
+  // Reflect the velocity component moving into the surface.
+  const normalVelocity = Vec3.dot(body.velocity, normal);
+  if (normalVelocity < 0) {
+    Vec3.scaleAndAdd(
+      body.velocity,
+      body.velocity,
+      normal,
+      -(1 + restitution) * normalVelocity,
+    );
+  }
+  return true;
+}
+
+const _hsVertex: Vec3T = [0, 0, 0];
+const _hsRxN: Vec3T = [0, 0, 0];
+const _hsInertia: Vec3T = [0, 0, 0];
+const _hsImpulse: Vec3T = [0, 0, 0];
+
+/** Vertices within this distance of the surface join the ground contact set. */
+const GROUND_CONTACT_BAND = 0.02;
+/** Sequential-impulse iterations for the ground contact set. */
+const GROUND_VELOCITY_ITERATIONS = 4;
+
+/**
+ * Convex half-space resolution: rest the body on its actual hull. The deepest
+ * penetrating vertex drives the positional push-out, then a non-penetration
+ * impulse is applied at every contacting vertex (at the true contact point, so
+ * the response includes the induced rotation). This lets tilted fragments rotate
+ * to settle flat and topple over edges rather than hovering at their bounding
+ * sphere. Falls back to the sphere correction for degenerate hulls.
+ */
+function resolveHalfSpaceConvex(
+  body: RigidBody,
+  normal: ReadonlyVec3,
+  offset: number,
+  restitution: number,
+  collider: ConvexShape,
+): boolean {
+  const { vertices } = collider;
+  if (vertices.length < 9) {
+    // Fewer than three vertices: no meaningful footprint, use the sphere.
+    return resolveHalfSpaceSphere(body, normal, offset, restitution);
+  }
+
+  // Deepest signed distance of any hull vertex below the surface.
+  let minDist = Infinity;
+  for (let i = 0; i < vertices.length; i += 3) {
+    _hsVertex[0] = vertices[i]!;
+    _hsVertex[1] = vertices[i + 1]!;
+    _hsVertex[2] = vertices[i + 2]!;
+    Vec3.transformQuat(_hsVertex, _hsVertex, body.orientation);
+    const d =
+      normal[0] * (_hsVertex[0] + body.position[0]) +
+      normal[1] * (_hsVertex[1] + body.position[1]) +
+      normal[2] * (_hsVertex[2] + body.position[2]) -
+      offset;
+    if (d < minDist) {
+      minDist = d;
+    }
+  }
+
+  if (minDist >= 0) {
+    return false; // Whole hull is above the surface.
+  }
+
+  // Positional correction: lift the body so its lowest vertex sits on the surface.
+  Vec3.scaleAndAdd(body.position, body.position, normal, -minDist);
+
+  // Velocity resolution: apply a non-penetration impulse at each vertex now in
+  // contact. Iterating a few times converges the multi-point resting contact.
+  for (let iter = 0; iter < GROUND_VELOCITY_ITERATIONS; iter++) {
+    for (let i = 0; i < vertices.length; i += 3) {
+      // r = contact offset from the centre of mass (world-space).
+      _hsVertex[0] = vertices[i]!;
+      _hsVertex[1] = vertices[i + 1]!;
+      _hsVertex[2] = vertices[i + 2]!;
+      Vec3.transformQuat(_hsVertex, _hsVertex, body.orientation);
+
+      const d =
+        normal[0] * (_hsVertex[0] + body.position[0]) +
+        normal[1] * (_hsVertex[1] + body.position[1]) +
+        normal[2] * (_hsVertex[2] + body.position[2]) -
+        offset;
+      if (d > GROUND_CONTACT_BAND) {
+        continue; // Not touching the surface.
+      }
+
+      // Normal velocity at the contact: v + (omega × r), dotted with the normal.
+      const av0 = body.angularVelocity[1] * _hsVertex[2] - body.angularVelocity[2] * _hsVertex[1];
+      const av1 = body.angularVelocity[2] * _hsVertex[0] - body.angularVelocity[0] * _hsVertex[2];
+      const av2 = body.angularVelocity[0] * _hsVertex[1] - body.angularVelocity[1] * _hsVertex[0];
+      const vn =
+        normal[0] * (body.velocity[0] + av0) +
+        normal[1] * (body.velocity[1] + av1) +
+        normal[2] * (body.velocity[2] + av2);
+      if (vn >= 0) {
+        continue; // Separating or resting at this point.
+      }
+
+      // Effective inverse mass along the normal at r: invMass + (r×n)·(Iinv (r×n)).
+      Vec3.cross(_hsRxN, _hsVertex, normal);
+      worldInvInertiaMultiply(body, _hsRxN, _hsInertia);
+      const kn = body.invMass + Vec3.dot(_hsRxN, _hsInertia);
+      if (kn <= 0) {
+        continue;
+      }
+
+      const jn = (-(1 + restitution) * vn) / kn;
+      _hsImpulse[0] = normal[0] * jn;
+      _hsImpulse[1] = normal[1] * jn;
+      _hsImpulse[2] = normal[2] * jn;
+      applyImpulseAtPoint(body, _hsImpulse, _hsVertex);
+    }
+  }
+
+  return true;
 }
 
 const _tipVertex: Vec3T = [0, 0, 0];
@@ -119,6 +269,24 @@ function applyTippingTorque(
   collider: ConvexShape,
   tipFactor: number,
 ): boolean {
+  // Only initiate a topple from a near-resting state. A piece that is already
+  // moving or spinning is left to the contact solver; nudging it here would feed
+  // energy into the ground contact and launch it away.
+  const speedSq =
+    body.velocity[0] * body.velocity[0] +
+    body.velocity[1] * body.velocity[1] +
+    body.velocity[2] * body.velocity[2];
+  if (speedSq > TIP_REST_SPEED_SQ) {
+    return false;
+  }
+  const spinSq =
+    body.angularVelocity[0] * body.angularVelocity[0] +
+    body.angularVelocity[1] * body.angularVelocity[1] +
+    body.angularVelocity[2] * body.angularVelocity[2];
+  if (spinSq > MAX_TIP_OMEGA * MAX_TIP_OMEGA) {
+    return false;
+  }
+
   // Build the contact set: collider vertices at/under the surface, projected to
   // the ground plane's 2D basis (u, v) with the COM as the origin.
   const basis = groundBasis(normal);
@@ -157,7 +325,7 @@ function applyTippingTorque(
 
   // COM overhangs: find the nearest boundary point and the outward direction.
   const near = nearestBoundaryPoint(hull, comU, comV);
-  if (near.dist <= 1e-6) {
+  if (near.dist <= TIP_OVERHANG_DEADZONE) {
     return false;
   }
   const outU = (comU - near.u) / near.dist;
@@ -170,11 +338,25 @@ function applyTippingTorque(
   Vec3.cross(_tipAxis, normal, _tipOut);
   Vec3.normalize(_tipAxis, _tipAxis);
 
-  const magnitude = near.dist * tipFactor * TIP_DT_ESTIMATE;
-  _tipAxis[0] *= magnitude;
-  _tipAxis[1] *= magnitude;
-  _tipAxis[2] *= magnitude;
-  applyAngularImpulse(body, _tipAxis);
+  // Ramp the angular velocity directly (inertia-independent) toward a bounded
+  // target spin about the tip axis. A floor makes the piece commit to a brisk
+  // topple the moment its COM clears the edge (rather than creeping with the
+  // tiny initial overhang); the cap keeps small fragments from runaway spin.
+  const targetOmega = Math.min(
+    Math.max(near.dist * tipFactor, MIN_TIP_OMEGA),
+    MAX_TIP_OMEGA,
+  );
+  const currentAbout =
+    body.angularVelocity[0] * _tipAxis[0] +
+    body.angularVelocity[1] * _tipAxis[1] +
+    body.angularVelocity[2] * _tipAxis[2];
+  if (currentAbout >= targetOmega) {
+    return false;
+  }
+  const step = Math.min(targetOmega - currentAbout, TIP_RAMP_PER_STEP);
+  body.angularVelocity[0] += _tipAxis[0] * step;
+  body.angularVelocity[1] += _tipAxis[1] * step;
+  body.angularVelocity[2] += _tipAxis[2] * step;
   return true;
 }
 

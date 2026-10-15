@@ -121,6 +121,32 @@ describe('resolveHalfSpace tipping', () => {
   });
 });
 
+describe('resolveHalfSpace convex resting', () => {
+  it('rests a flat slab on its real geometry, not its bounding sphere', () => {
+    // A wide, thin slab: bounding radius (~1.42) is far larger than its 0.1
+    // half-height. With the sphere method it would hover ~1.3 above the floor.
+    // Start penetrating (base at y = -0.1) as it would after a gravity step.
+    const box = boxCollider(1, 0.1, 1);
+    const body = createBody({ position: [0, 0, 0], velocity: [0, -5, 0], radius: Math.hypot(1, 0.1, 1) });
+    resolveHalfSpace(body, [0, 1, 0], 0, 0, box, 0);
+    // Base (local y = -0.1) should sit on the ground: centre at y = 0.1.
+    expect(body.position[1]).toBeCloseTo(0.1, 6);
+    // Downward velocity absorbed by the resting contact.
+    expect(body.velocity[1]).toBeGreaterThan(-1e-6);
+  });
+
+  it('spins a slab that lands tilted on one edge so it can settle flat', () => {
+    // Slab rotated 30° about Z, penetrating the ground on its lower edge.
+    const box = boxCollider(1, 0.1, 1);
+    const angle = Math.PI / 6;
+    const orientation: [number, number, number, number] = [0, 0, Math.sin(angle / 2), Math.cos(angle / 2)];
+    const body = createBody({ position: [0, 0.2, 0], velocity: [0, -5, 0], orientation, radius: Math.hypot(1, 0.1, 1) });
+    resolveHalfSpace(body, [0, 1, 0], 0, 0, box, 0);
+    // The off-centre edge impact induces angular velocity about Z (rotates flat).
+    expect(Math.abs(body.angularVelocity[2])).toBeGreaterThan(0);
+  });
+});
+
 describe('cleanup', () => {
   it('detects out-of-bounds positions', () => {
     const bounds = createAabb([-10, -10, -10], [10, 10, 10]);
