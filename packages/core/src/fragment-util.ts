@@ -104,6 +104,16 @@ export function replaceWithFragments(
   const name = world.metadata.get(id)?.name;
   const tags = [...(world.metadata.get(id)?.tags ?? [])];
   const material = world.materialRefs.get(id)?.materialId;
+  // Fragments inherit the parent's small-fragment-culling exemption, so an
+  // opted-out body's pieces stay visible (Phase 12).
+  const cullable = world.metadata.get(id)?.cullable;
+  // When a material with density is defined, derive each fragment's mass from
+  // density × volume rather than distributing the parent's mass. Without this,
+  // a static parent (mass=0 → fallback mass=1) distributes that fixed 1 kg
+  // across all subsequent slices, so thin second/third cuts get near-zero mass
+  // and not enough kinetic energy to fracture on landing.
+  const materialDef = material !== undefined ? world.materials.get(material) : undefined;
+  const densityForMass = (materialDef && materialDef.density > 0) ? materialDef.density : 0;
 
   world.despawn(id);
   removed.push(id);
@@ -113,10 +123,11 @@ export function replaceWithFragments(
     // identity orientation with its centroid as position.
     const localMesh = recenterMesh(fragment.mesh, fragment.centroid);
     const fragmentVolume = Math.abs(computeVolume(fragment.mesh));
-    const mass =
-      Number.isFinite(parentMass) && parentVolume > 0
+    const mass = densityForMass > 0
+      ? Math.max(densityForMass * fragmentVolume, 1e-3)
+      : (Number.isFinite(parentMass) && parentVolume > 0
         ? Math.max(parentMass * (fragmentVolume / parentVolume), 1e-3)
-        : 1;
+        : 1);
 
     const velocity: Vec3T = [
       parentVelocity[0] + fragment.impulse[0],
@@ -136,6 +147,8 @@ export function replaceWithFragments(
       mass,
       radius: boundingRadius(localMesh),
       ...(fragment.hull ? { collider: fragment.hull } : {}),
+      volume: fragmentVolume,
+      ...(cullable === false ? { cullable: false } : {}),
       ...(meshRef !== undefined ? { meshRef } : {}),
       ...(name !== undefined ? { name } : {}),
       ...(material !== undefined ? { material } : {}),

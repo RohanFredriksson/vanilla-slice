@@ -81,6 +81,32 @@ describe('ThreeRenderer', () => {
     expect(meshAfter!.position.y).toBeLessThan(0); // fell under gravity
   });
 
+  it('shrinks a culled entity\'s mesh scale as it dissolves (Phase 12.1)', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0.5, shrinkSeconds: 1 },
+    });
+    const id = world.spawn({
+      geometry: createBox(0.1, 0.1, 0.1),
+      meshRef: 'spec',
+    });
+    const renderer = new ThreeRenderer();
+    renderer.sync(world);
+    expect(renderer.getObject(id)!.scale.toArray()).toEqual([1, 1, 1]);
+
+    world.update(0.5); // marked dissolving: scale still full
+    renderer.sync(world);
+    expect(renderer.getObject(id)!.scale.toArray()).toEqual([1, 1, 1]);
+
+    world.update(0.5); // halfway through the shrink
+    renderer.sync(world);
+    expect(renderer.getObject(id)!.scale.x).toBeCloseTo(0.5, 6);
+
+    world.update(0.5); // shrink window over: entity despawned, mesh removed
+    renderer.sync(world);
+    expect(renderer.getObject(id)).toBeUndefined();
+  });
+
   it('removes meshes for despawned entities', () => {
     const world = createWorld({ gravity: [0, 0, 0] });
     const id = world.spawn({ geometry: createBox(), meshRef: 'fruit' });

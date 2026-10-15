@@ -89,7 +89,10 @@ export const fractureProcessor: InteractionProcessor<SimWorld> = {
   apply(ctx: InteractionContext<SimWorld>): InteractionOutcome {
     const { world, event, material } = ctx;
     const origin = event.contact?.points[0]?.point as Vec3T | undefined;
-    return fractureEntity(
+    // Generation of the piece being shattered; its fragments are one deeper so
+    // the collision/ground systems can bound automatic re-fracturing.
+    const parentGeneration = world.metadata.get(event.entity)?.fractureGeneration ?? 0;
+    const outcome = fractureEntity(
       world,
       event.entity,
       buildFractureOptions(world, event.entity, material, {
@@ -97,5 +100,12 @@ export const fractureProcessor: InteractionProcessor<SimWorld> = {
         ...(origin ? { origin } : {}),
       }),
     );
+    for (const fragmentId of outcome.created) {
+      const metadata = world.metadata.get(fragmentId);
+      if (metadata) {
+        metadata.fractureGeneration = parentGeneration + 1;
+      }
+    }
+    return outcome;
   },
 };

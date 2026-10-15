@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createBox, createMesh, computeVolume } from '@vanilla-slice/geometry';
 import type { Mesh } from '@vanilla-slice/geometry';
+import { createSliceVolume } from '@vanilla-slice/slicing';
+import { createPlane, fromNormalAndPoint } from '@vanilla-slice/geometry';
 import { createWorld, World } from './world';
 
 describe('World lifecycle', () => {
@@ -105,6 +107,230 @@ describe('World update loop', () => {
     expect(state).toHaveLength(1);
     expect(state[0]!.meshRef).toBe('a');
     expect(state[0]!.position).toEqual([1, 2, 3]);
+  });
+});
+
+describe('World small-fragment culling (Phase 12)', () => {
+  const tiny = () => createBox(0.1, 0.1, 0.1); // volume 0.001
+
+  it('is disabled by default: tiny bodies persist indefinitely', () => {
+    const world = createWorld({ gravity: [0, 0, 0] });
+    const id = world.spawn({ geometry: tiny() });
+    for (let i = 0; i < 300; i++) {
+      world.update(1 / 60);
+    }
+    expect(world.has(id)).toBe(true);
+  });
+
+  it('records the geometry volume on metadata at spawn', () => {
+    const world = createWorld();
+    const id = world.spawn({ geometry: createBox(2, 2, 2) });
+    expect(world.metadata.get(id)!.volume).toBeCloseTo(8, 6);
+  });
+
+  it('honors an explicit volume override and computes none', () => {
+    const world = createWorld();
+    const id = world.spawn({ geometry: createBox(2, 2, 2), volume: 0.5 });
+    expect(world.metadata.get(id)!.volume).toBeCloseTo(0.5, 6);
+  });
+
+  it('culls a small body only after the configured delay', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 1, shrinkSeconds: 0 },
+    });
+    const id = world.spawn({ geometry: tiny() });
+    world.update(0.9);
+    expect(world.has(id)).toBe(true); // below threshold, delay not yet elapsed
+    world.update(0.2);
+    expect(world.has(id)).toBe(false);
+  });
+
+  it('never culls bodies above the volume threshold', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0 },
+    });
+    const id = world.spawn({ geometry: createBox(2, 2, 2) }); // volume 8
+    for (let i = 0; i < 120; i++) {
+      world.update(1 / 60);
+    }
+    expect(world.has(id)).toBe(true);
+  });
+
+  it('protects static bodies by default (skipStatic)', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0 },
+    });
+    const id = world.spawn({ geometry: tiny(), mass: 0 });
+    world.update(1);
+    expect(world.has(id)).toBe(true);
+  });
+
+  it('culls static bodies when skipStatic is false', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0, skipStatic: false },
+    });
+    const id = world.spawn({ geometry: tiny(), mass: 0 });
+    world.update(1);
+    expect(world.has(id)).toBe(false);
+  });
+
+  it('exempts bodies flagged cullable: false', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0 },
+    });
+    const id = world.spawn({ geometry: tiny(), cullable: false });
+    for (let i = 0; i < 120; i++) {
+      world.update(1 / 60);
+    }
+    expect(world.has(id)).toBe(true);
+  });
+
+  it('culls geometry-less bodies given an explicit volume', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0 },
+    });
+    const id = world.spawn({ radius: 0.5, volume: 0.01 });
+    world.update(1);
+    expect(world.has(id)).toBe(false);
+  });
+
+  it('culls tiny slice fragments after the delay, not before', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0.5, shrinkSeconds: 0 },
+    });
+    world.spawn({ geometry: createBox(0.2, 0.2, 0.2) }); // volume 0.008
+    const plane = fromNormalAndPoint(createPlane(), [1, 0, 0], [0, 0, 0]);
+    const outcome = world.slice(createSliceVolume(plane, [0, 0, 0], 2));
+    expect(outcome.created.length).toBeGreaterThanOrEqual(2);
+
+    world.update(0.4); // below the delay: fragments still alive
+    for (const fid of outcome.created) {
+      expect(world.has(fid)).toBe(true);
+    }
+
+    world.update(0.2); // age passes 0.5s: tiny fragments culled
+    expect(world.entityCount).toBe(0);
+  });
+
+  it('fragments inherit the parent cullable: false exemption', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0 },
+    });
+    world.spawn({ geometry: createBox(0.2, 0.2, 0.2), cullable: false });
+    const plane = fromNormalAndPoint(createPlane(), [1, 0, 0], [0, 0, 0]);
+    const outcome = world.slice(createSliceVolume(plane, [0, 0, 0], 2));
+    world.update(1);
+    for (const fid of outcome.created) {
+      expect(world.has(fid)).toBe(true);
+    }
+  });
+});
+
+describe('World shrink-dissolve despawn (Phase 12.1)', () => {
+  const tiny = () => createBox(0.1, 0.1, 0.1); // volume 0.001
+
+  it('marks a culled body dissolving instead of despawning instantly', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0.5, shrinkSeconds: 0.3 },
+    });
+    const id = world.spawn({ geometry: tiny() });
+    world.update(0.5); // crosses the threshold exactly
+    expect(world.has(id)).toBe(true);
+    expect(world.metadata.get(id)!.dissolving).toBe(true);
+  });
+
+  it('despawns a dissolving body only at delay + shrink', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0.5, shrinkSeconds: 0.3 },
+    });
+    const id = world.spawn({ geometry: tiny() });
+    world.update(0.5); // marked dissolving
+    world.update(0.2); // age 0.7 < 0.8: still shrinking
+    expect(world.has(id)).toBe(true);
+    world.update(0.11); // age 0.81 >= 0.8: shrink complete, despawned
+    expect(world.has(id)).toBe(false);
+  });
+
+  it('eases the render scale 1 -> 0 across the shrink window', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0.5, shrinkSeconds: 1 },
+    });
+    const id = world.spawn({ geometry: tiny(), meshRef: 'spec' });
+    world.update(0.5); // marked dissolving, scale still 1
+    expect(world.getRenderState()[0]!.scale).toEqual([1, 1, 1]);
+    world.update(0.5); // halfway through the shrink
+    const halfway = world.getRenderState()[0]!.scale;
+    expect(halfway[0]).toBeCloseTo(0.5, 6);
+    world.update(0.5); // shrink window over; entity despawned
+    expect(world.getRenderState()).toHaveLength(0);
+    expect(world.has(id)).toBe(false);
+  });
+
+  it('reports scale [1,1,1] for ordinary bodies', () => {
+    const world = createWorld({ gravity: [0, 0, 0] });
+    world.spawn({ geometry: createBox(), meshRef: 'spec' });
+    expect(world.getRenderState()[0]!.scale).toEqual([1, 1, 1]);
+  });
+
+  it('shrinkSeconds: 0 keeps instant despawn', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0.5, shrinkSeconds: 0 },
+    });
+    const id = world.spawn({ geometry: tiny() });
+    world.update(0.5);
+    expect(world.has(id)).toBe(false); // despawned the moment it crossed
+  });
+
+  it('takes a dissolving body out of the broad phase: slices cannot hit it', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0.5, shrinkSeconds: 0.5 },
+    });
+    const id = world.spawn({ geometry: tiny(), position: [0, 0, 0] });
+    world.update(0.5); // marked dissolving, removed from the spatial hash
+    const plane = fromNormalAndPoint(createPlane(), [1, 0, 0], [0, 0, 0]);
+    const outcome = world.slice(createSliceVolume(plane, [0, 0, 0], 2));
+    expect(outcome.removed).toEqual([]);
+    expect(world.has(id)).toBe(true); // still alive, still shrinking
+    world.update(0.6); // age 1.1 >= delay 0.5 + shrink 0.5
+    expect(world.has(id)).toBe(false);
+  });
+
+  it('exempts dissolving bodies from bounds cleanup until the shrink completes', () => {
+    const world = createWorld({
+      gravity: [0, 0, 0],
+      bounds: { min: [-5, -5, -5], max: [5, 2, 5] },
+      smallBodyCulling: { minVolume: 1, delaySeconds: 0.2, shrinkSeconds: 1 },
+    });
+    const id = world.spawn({ geometry: tiny(), position: [0, 0, 0], velocity: [0, 5, 0] });
+    // 13 one-frame steps: age 0.217s crosses the 0.2s delay, sim y = 1.08 (in bounds).
+    for (let i = 0; i < 13; i++) {
+      world.update(1 / 60);
+    }
+    expect(world.metadata.get(id)!.dissolving).toBe(true);
+    // Continue past the bounds (y > 2 at age ~0.43s): still alive while shrinking.
+    for (let i = 0; i < 13; i++) {
+      world.update(1 / 60);
+    }
+    expect(world.bodies.get(id)!.position[1]).toBeGreaterThan(2);
+    expect(world.has(id)).toBe(true);
+    // The shrink window (delay 0.2 + shrink 1 = age 1.2s) eventually despawns it.
+    for (let i = 0; i < 47; i++) {
+      world.update(1 / 60);
+    }
+    expect(world.has(id)).toBe(false);
   });
 });
 

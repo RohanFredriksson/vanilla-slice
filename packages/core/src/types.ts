@@ -27,6 +27,38 @@ export interface Sliceable {
 export interface Metadata {
   tags: Set<string>;
   name?: string;
+  /**
+   * How many automatic impact-fractures this body is descended from. Original
+   * (spawned or sliced) bodies are generation `0`; each impact-fracture stamps
+   * its fragments one generation higher. The collision/ground systems cap this
+   * so a hard landing can shatter a piece a bounded number of times instead of
+   * cascading into dust.
+   */
+  fractureGeneration?: number;
+  /**
+   * Volume of the body's geometry in world units³, computed once at spawn
+   * (fragments pass their already-known volume through). Read by the optional
+   * small-fragment culling (Phase 12); absent for bodies without geometry.
+   */
+  volume?: number;
+  /**
+   * Accumulated seconds since spawn, advanced by the culling pass. Only
+   * tracked while the world configures `smallBodyCulling` (Phase 12).
+   */
+  ageSeconds?: number;
+  /**
+   * Set to `false` to exempt this body from small-fragment culling. Defaults
+   * to `true`; only stored when opted out (Phase 12).
+   */
+  cullable?: boolean;
+  /**
+   * Set when the body has crossed the small-fragment culling threshold and is
+   * shrinking out of existence. A dissolving body stops participating in
+   * collision, spatial, slicing, fracture, and bounds cleanup, but keeps
+   * integrating under physics; it is despawned when its age reaches
+   * `delaySeconds + shrinkSeconds` (Phase 12.1).
+   */
+  dissolving?: boolean;
 }
 
 /**
@@ -73,6 +105,28 @@ export interface WorldConfig {
   decomposeColliders?: boolean;
   /** Angular impulse scale for tipping unstable bodies. 0 disables it. Default 12. */
   tipFactor?: number;
+  /**
+   * Optional cleanup of tiny fragments: bodies whose volume falls below
+   * `minVolume` (world units³) and have existed for at least `delaySeconds`
+   * are despawned by the cleanup pass. Absent = disabled (no behaviour
+   * change). Repeated slices grind a body into near-zero-volume slivers —
+   * each one a full body — so this keeps body counts bounded; small pieces
+   * visibly dissolve shortly after being cut (Phase 12).
+   */
+  smallBodyCulling?: {
+    /** Volume threshold in world units³; bodies below this are cull candidates. */
+    minVolume: number;
+    /** Seconds a body must exist before it may be culled. */
+    delaySeconds: number;
+    /** Skip static bodies (`mass: 0`). Defaults to `true`. */
+    skipStatic?: boolean;
+    /**
+     * Seconds a culled body visibly shrinks (render scale 1 → 0) before it is
+     * despawned, instead of popping out of existence. Defaults to `0.3`;
+     * `0` despawns instantly (Phase 12.1).
+     */
+    shrinkSeconds?: number;
+  };
 }
 
 /** Fully-resolved configuration with all defaults applied. */
@@ -89,6 +143,13 @@ export interface ResolvedConfig {
   friction: number;
   decomposeColliders: boolean;
   tipFactor: number;
+  /** Resolved small-fragment culling settings; absent = feature disabled. */
+  smallBodyCulling?: {
+    minVolume: number;
+    delaySeconds: number;
+    skipStatic: boolean;
+    shrinkSeconds: number;
+  };
 }
 
 /** Options for spawning an entity. */
@@ -137,6 +198,17 @@ export interface SpawnOptions {
    * `decomposeColliders`. Ignored when `collider` is given.
    */
   decompose?: boolean;
+  /**
+   * Volume override (world units³) used by small-fragment culling. Defaults
+   * to the geometry's computed volume. Slicing passes each fragment's known
+   * volume so it is not recomputed (Phase 12).
+   */
+  volume?: number;
+  /**
+   * Set to `false` to exempt this body from small-fragment culling. Defaults
+   * to `true`. Ignored unless the world configures `smallBodyCulling`.
+   */
+  cullable?: boolean;
 }
 
 /** A snapshot of one renderable entity's transform for the render adapter. */
@@ -146,6 +218,12 @@ export interface RenderItem {
   position: Vec3T;
   orientation: QuatT;
   visible: boolean;
+  /**
+   * Uniform render scale. `[1,1,1]` normally; a culled body in its shrink
+   * phase eases this from `1` → `0` over `smallBodyCulling.shrinkSeconds`, so
+   * pieces visibly dissolve instead of popping (Phase 12.1).
+   */
+  scale: Vec3T;
   /**
    * The entity's material id, when it has a {@link MaterialRef}. Surfaced as
    * neutral data so the render adapter can pick a per-material appearance (e.g.

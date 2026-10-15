@@ -1,7 +1,9 @@
 # Vanilla Slice — Roadmap (ROADMAP.md)
 
 Status: Living · Phases 0–11 implemented; Phase 7 hardening and follow-ups
-ongoing. Phase 11 (textured cut & fracture surfaces, ADR 0010) complete.
+ongoing. Phase 11 (textured cut & fracture surfaces, ADR 0010), Phase 12
+(small-fragment culling, ADR 0011), and Phase 12.1 (shrink-dissolve despawn,
+ADR 0011 amendment) complete.
 
 The roadmap sequences work from documentation through a working demo. Each phase
 gates the next.
@@ -304,6 +306,64 @@ appearance lives in the renderer, keyed by material id (ADR 0010).
       cut) and a watermelon in `slicing-game` (green rind → red flesh).
 - [ ] Defer: non-convex cap cross-sections (unchanged assumption); per-face
       material assignment beyond the two-slot exterior/interior split.
+
+## Phase 12 — Small-fragment Culling (proposed)
+
+Optional, configurable cleanup for infinitesimal slice fragments. Repeated cuts
+grind a body into hundreds of near-zero-volume slivers; every sliver is a full
+body (integration, broad-phase entry, collision pair, render mesh), so scenes
+slow down as fragment counts climb. When enabled, a body whose **volume** falls
+below a configured threshold and that has existed for at least a configured
+delay is despawned by the cleanup pass — tiny pieces visibly dissolve shortly
+after being cut, keeping body counts bounded. **Off by default:** an absent
+config changes nothing, preserving current behaviour and determinism exactly.
+
+- [x] **P1 — Config & bookkeeping (`core`).** Add `smallBodyCulling` to
+      `WorldConfig`/`ResolvedConfig` (`minVolume`, `delaySeconds`, optional
+      `skipStatic` default `true`). Record `volume` — computed once from
+      geometry at spawn, fragments pass theirs through via
+      `SpawnOptions.volume` so `replaceWithFragments` does not recompute — and
+      `ageSeconds` on `Metadata`. Per-entity opt-out `SpawnOptions.cullable`
+      (default `true`), mirroring `collides`.
+- [x] **P2 — Culling system (`core`).** New `cullSmallBodies(world, dt)` in
+      `systems.ts`, invoked from `World.update` only when configured: accumulate
+      `ageSeconds` with the frame delta, then despawn bodies with
+      `volume < minVolume` and `ageSeconds >= delaySeconds`. Static bodies,
+      `cullable: false` bodies, and bodies without geometry (no volume) are
+      never culled. Per-frame cost is one comparison per body — no allocation.
+- [x] **P3 — Tests.** Disabled-by-default; threshold and delay semantics;
+      static and per-entity protection; the slice → fragment → ages-out path;
+      no per-frame allocations on the hot path.
+- [x] **P4 — Docs.** SPEC FR-34 (below); ADR 0011 (small-fragment culling).
+
+## Phase 12.1 — Shrink-dissolve despawn (proposed)
+
+Culled fragments **shrink out of existence** instead of popping. When a body
+crosses the culling threshold it stops participating in collision, spatial,
+and fracture (`Metadata.dissolving`), keeps drifting/settling under physics,
+and its render scale eases from `1` → `0` over
+`smallBodyCulling.shrinkSeconds` (default `0.3`; `0` = instant despawn, exactly
+as today). The engine owns the dissolve timing and scale as simulation state
+and surfaces it via `RenderItem.scale`; the render adapter merely applies it
+(ownership rules, ADR 0002 / ADR 0011 amendment).
+
+- [x] **P1 — Dissolve lifecycle (`core`).** `Metadata.dissolving` flag set when
+      `ageSeconds` first crosses `delaySeconds` while below `minVolume`;
+      dissolve progress derives from the existing age timer (despawn at
+      `ageSeconds >= delaySeconds + shrinkSeconds`, no second timer). Skip
+      dissolving bodies in `syncSpatial`, `resolveCollisions`, ground-fracture
+      tracking, and bounds cleanup so the animation always completes untouched.
+- [x] **P2 — Render scale (`core` + `renderer-three`).** `RenderItem.scale`
+      (uniform `[s,s,s]`, `1` when not dissolving; `s` eases 1 → 0 across
+      `shrinkSeconds`); `three-renderer` applies `mesh.scale` in `sync`.
+- [x] **P3 — Config (`core`).** `smallBodyCulling.shrinkSeconds` (default
+      `0.3`; `0` disables the animation).
+- [x] **P4 — Tests.** Dissolve starts only at the threshold; scale reaches 0 by
+      the deadline; despawn exactly at `delay + shrink`; no collision/spatial/
+      fracture participation while dissolving; `shrinkSeconds: 0` keeps instant
+      despawn; renderer applies scale.
+- [x] **P5 — Docs.** SPEC FR-34 amendment; ADR 0011 amendment; demo validation
+      in slice-everything.
 
 ## AI-DLC operating cadence
 - Break phases into small issues on the board:

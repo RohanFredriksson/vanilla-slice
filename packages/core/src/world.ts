@@ -21,6 +21,7 @@ import {
   stepPhysics,
   syncSpatial,
   runCleanup,
+  cullSmallBodies,
   getRenderState,
 } from './systems';
 import { sliceWorld, sliceProcessor } from './slice-system';
@@ -60,6 +61,14 @@ function resolveConfig(config: WorldConfig): ResolvedConfig {
     friction: config.friction ?? 0.5,
     decomposeColliders: config.decomposeColliders ?? false,
     tipFactor: config.tipFactor ?? 12,
+    smallBodyCulling: config.smallBodyCulling
+      ? {
+          minVolume: config.smallBodyCulling.minVolume,
+          delaySeconds: config.smallBodyCulling.delaySeconds,
+          skipStatic: config.smallBodyCulling.skipStatic ?? true,
+          shrinkSeconds: config.smallBodyCulling.shrinkSeconds ?? 0.3,
+        }
+      : undefined,
   };
 }
 
@@ -108,13 +117,19 @@ export class World implements SimWorld {
 
     // Resolve the material (if any) and derive mass from density × volume when
     // no explicit mass was given. Materialless bodies keep the prior default.
+    // The volume is computed once here and reused for culling bookkeeping.
     const material =
       options.material !== undefined
         ? this.materials.get(options.material)
         : undefined;
+    let volume: number | undefined;
+    if (options.volume !== undefined) {
+      volume = options.volume;
+    } else if (options.geometry) {
+      volume = Math.abs(computeVolume(options.geometry));
+    }
     let mass = options.mass;
-    if (mass === undefined && material && options.geometry) {
-      const volume = Math.abs(computeVolume(options.geometry));
+    if (mass === undefined && material && volume !== undefined) {
       mass = volume > 0 ? massFromDensity(material.density, volume) : 1;
     }
 
@@ -165,6 +180,8 @@ export class World implements SimWorld {
     this.metadata.set(id, {
       tags: new Set(options.tags ?? []),
       ...(options.name !== undefined ? { name: options.name } : {}),
+      ...(volume !== undefined ? { volume } : {}),
+      ...(options.cullable === false ? { cullable: false } : {}),
     });
 
     insert(this.spatial, id, sphereAabb(body.position, body.radius));
@@ -207,6 +224,7 @@ export class World implements SimWorld {
     processInteractions(this);
     syncSpatial(this);
     runCleanup(this);
+    cullSmallBodies(this, frameDelta);
   }
 
   /** Interpolation factor in `[0, 1)` toward the next fixed step. */

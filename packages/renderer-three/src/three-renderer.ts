@@ -92,6 +92,9 @@ export class ThreeRenderer {
         item.orientation[2],
         item.orientation[3],
       );
+      // Uniform render scale; dissolving (culled) pieces shrink to zero so they
+      // visibly dissolve instead of popping (Phase 12.1).
+      mesh.scale.set(item.scale[0], item.scale[1], item.scale[2]);
       mesh.visible = item.visible;
     }
 

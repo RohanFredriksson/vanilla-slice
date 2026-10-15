@@ -6,13 +6,66 @@ import {
   convexConvexManifold,
   sphereSphereContact,
   resolveContact,
+  getMass,
 } from '@vanilla-slice/physics';
 import type { RigidBody, ContactManifold } from '@vanilla-slice/physics';
-import { insert, getPotentialPairs } from '@vanilla-slice/spatial';
+import { insert, remove as spatialRemove, getPotentialPairs } from '@vanilla-slice/spatial';
 import { exceedsFractureThreshold } from '@vanilla-slice/interactions';
 import { sphereAabb } from './mesh-util';
-import type { SimWorld, RenderItem, EntityId } from './types';
+import type { SimWorld, RenderItem, EntityId, Vec3T, GroundConfig } from './types';
 import type { ConvexShape } from '@vanilla-slice/physics';
+
+/**
+ * Bodies smaller than this bounding radius never fracture on a ground impact.
+ * Keeps small shards from shattering endlessly into dust on every bounce.
+ */
+const MIN_GROUND_FRACTURE_RADIUS = 0.35;
+
+/**
+ * How many times a piece may be re-shattered by automatic impact fractures.
+ * Sliced/spawned bodies are generation 0; each impact-fracture produces
+ * generation+1 fragments. Capping this prevents a runaway cascade — smaller
+ * fragments have a lower `toughness × size` threshold, so without a bound a
+ * single hard landing would shatter forever.
+ */
+const MAX_IMPACT_FRACTURE_GENERATIONS = 2;
+
+/**
+ * Minimum brittleness for a material to shatter on a hard impact. Materials
+ * below this are ductile/tough and deform or slide rather than cracking — they
+ * never fracture on collision regardless of energy. Stone (0.4), glass (0.9),
+ * etc. sit above this threshold; the default material (0) stays unbreakable.
+ */
+const MIN_BRITTLENESS_FOR_IMPACT = 0.05;
+
+/**
+ * Whether a body is still eligible to be shattered by an automatic impact
+ * (ground or body-vs-body): it must carry a fracturable, brittle-enough material
+ * and sit below the generation cap. Bounds the cascade regardless of energy or
+ * piece size.
+ */
+function canImpactFracture(world: SimWorld, id: EntityId): boolean {
+  const ref = world.materialRefs.get(id);
+  if (!ref) {
+    return false;
+  }
+  const material = world.materials.get(ref.materialId);
+  if (material.brittleness < MIN_BRITTLENESS_FOR_IMPACT) {
+    return false;
+  }
+  const generation = world.metadata.get(id)?.fractureGeneration ?? 0;
+  return generation < MAX_IMPACT_FRACTURE_GENERATIONS;
+}
+
+/**
+ * Whether a body is in its shrink-dissolve phase (Phase 12.1). Dissolving
+ * bodies have crossed the culling threshold and are shrinking out of
+ * existence: they no longer participate in collision, spatial, slicing,
+ * fracture, or bounds cleanup, but keep integrating under physics.
+ */
+function isDissolving(world: SimWorld, id: EntityId): boolean {
+  return world.metadata.get(id)?.dissolving === true;
+}
 
 /**
  * PhysicsSystem — advance every body by one fixed step: apply gravity/forces via
@@ -24,7 +77,15 @@ export function stepPhysics(world: SimWorld, dt: number): void {
   for (const [id, body] of world.bodies.entries()) {
     integrateBody(body, gravity, dt);
     if (ground) {
-      resolveHalfSpace(
+      // Track the inbound normal speed of fracturable bodies so a hard landing
+      // can be turned into an impact fracture (the ground is a half-space, not a
+      // body, so the body-vs-body impact path never sees it).
+      const track =
+        world.materialRefs.has(id) &&
+        world.sliceables.get(id)?.enabled === true &&
+        !isDissolving(world, id);
+      const vnBefore = track ? Vec3.dot(ground.normal, body.velocity) : 0;
+      const resolved = resolveHalfSpace(
         body,
         ground.normal,
         ground.offset,
@@ -32,12 +93,69 @@ export function stepPhysics(world: SimWorld, dt: number): void {
         world.colliders.get(id),
         world.config.tipFactor,
       );
+      // Only check for fracture when resolveHalfSpace actually found ground
+      // contact (resolved === true). Without this guard, tryGroundFracture is
+      // called every frame the body is falling (vnBefore < 0), and after enough
+      // frames the accumulated speed exceeds the threshold — causing fracture
+      // while the body is still in mid-air.
+      if (track && vnBefore < 0 && resolved) {
+        tryGroundFracture(world, id, body, ground, -vnBefore);
+      }
     }
   }
   if (world.config.collisions) {
     syncSpatial(world);
     resolveCollisions(world);
   }
+}
+
+/**
+ * Enqueue an `impact` interaction when a fracturable body strikes the ground
+ * hard enough to exceed its material's fracture threshold. `impactSpeed` is the
+ * inbound speed along the ground normal (measured before the half-space solve
+ * absorbed it); the kinetic energy `½·m·v²` is tested against `toughness × size`,
+ * exactly like body-vs-body impacts. Pieces below {@link MIN_GROUND_FRACTURE_RADIUS}
+ * are ignored so shards don't cascade into dust.
+ */
+function tryGroundFracture(
+  world: SimWorld,
+  id: EntityId,
+  body: RigidBody,
+  ground: GroundConfig,
+  impactSpeed: number,
+): void {
+  if (body.radius < MIN_GROUND_FRACTURE_RADIUS) {
+    return;
+  }
+  if (!canImpactFracture(world, id)) {
+    return;
+  }
+  const mass = getMass(body);
+  if (!Number.isFinite(mass)) {
+    return; // static body
+  }
+  const ref = world.materialRefs.get(id)!; // guaranteed by canImpactFracture
+  const material = world.materials.get(ref.materialId);
+  const energy = 0.5 * mass * impactSpeed * impactSpeed;
+  if (!exceedsFractureThreshold(material, energy, body.radius)) {
+    return;
+  }
+  // Contact point: the body centre projected onto the ground plane.
+  const dist = Vec3.dot(ground.normal, body.position) - ground.offset;
+  const contact: ContactManifold = {
+    normal: [ground.normal[0], ground.normal[1], ground.normal[2]],
+    points: [
+      {
+        point: [
+          body.position[0] - ground.normal[0] * dist,
+          body.position[1] - ground.normal[1] * dist,
+          body.position[2] - ground.normal[2] * dist,
+        ],
+        penetration: 0,
+      },
+    ],
+  };
+  world.interactions.enqueue({ type: 'impact', entity: id, energy, contact });
 }
 
 /** Build a one-point manifold from a bounding-sphere contact, or `null`. */
@@ -102,6 +220,9 @@ function enqueueImpact(
   if (!ref) {
     return;
   }
+  if (!canImpactFracture(world, id)) {
+    return;
+  }
   const material = world.materials.get(ref.materialId);
   if (exceedsFractureThreshold(material, energy, body.radius)) {
     world.interactions.enqueue({ type: 'impact', entity: id, other, energy, contact });
@@ -137,7 +258,6 @@ export function resolveCollisions(world: SimWorld): void {
     // Impact energy for material-driven fracture, only when a body can fracture.
     const canFracture =
       world.materialRefs.has(idA) || world.materialRefs.has(idB);
-    const impactEnergy = canFracture ? pairImpactEnergy(a, b) : 0;
     let impactQueued = false;
 
     const compoundA = world.compoundColliders.get(idA);
@@ -163,6 +283,7 @@ export function resolveCollisions(world: SimWorld): void {
             );
             if (manifold) {
               if (canFracture && !impactQueued) {
+                const impactEnergy = pairImpactEnergy(a, b);
                 enqueueImpact(world, idA, idB, a, impactEnergy, manifold);
                 enqueueImpact(world, idB, idA, b, impactEnergy, manifold);
                 impactQueued = true;
@@ -190,6 +311,7 @@ export function resolveCollisions(world: SimWorld): void {
         : sphereManifold(a, b);
     if (manifold) {
       if (canFracture && !impactQueued) {
+        const impactEnergy = pairImpactEnergy(a, b);
         enqueueImpact(world, idA, idB, a, impactEnergy, manifold);
         enqueueImpact(world, idB, idA, b, impactEnergy, manifold);
         impactQueued = true;
@@ -205,19 +327,84 @@ export function resolveCollisions(world: SimWorld): void {
  */
 export function syncSpatial(world: SimWorld): void {
   for (const [id, body] of world.bodies) {
+    // Dissolving bodies were removed from the hash when they started shrinking;
+    // re-inserting them would let them be sliced/collided with again.
+    if (isDissolving(world, id)) {
+      continue;
+    }
     insert(world.spatial, id, sphereAabb(body.position, body.radius));
   }
 }
 
 /**
  * CleanupSystem — remove bodies that have left the simulation bounds (fallen or
- * flown away).
+ * flown away). Dissolving bodies are exempt so their shrink animation always
+ * completes (Phase 12.1).
  */
 export function runCleanup(world: SimWorld): EntityId[] {
   const removed: EntityId[] = [];
   for (const [id, body] of world.bodies) {
+    if (isDissolving(world, id)) {
+      continue;
+    }
     if (isOutOfBounds(body.position, world.config.bounds)) {
       removed.push(id);
+    }
+  }
+  for (const id of removed) {
+    world.despawn(id);
+  }
+  return removed;
+}
+
+/**
+ * SmallFragmentCullingSystem — despawn tiny fragments once they have existed
+ * for a configured delay (Phase 12). Enabled only when the world configures
+ * `smallBodyCulling`; a body whose recorded `volume` is below `minVolume` and
+ * whose age reaches `delaySeconds` is removed, so repeated slices cannot grind
+ * the scene into hundreds of near-zero-volume bodies. Age accumulates for every
+ * eligible body regardless of current size, so a piece that shrinks on a later
+ * cut is already counted as aged. Static bodies, `cullable: false` bodies, and
+ * bodies without a recorded volume are exempt. Per-frame cost is one
+ * accumulation + one comparison per body — no allocations.
+ *
+ * When `shrinkSeconds > 0` (default 0.3), a body that crosses the threshold is
+ * first marked `dissolving` instead of being despawned: it is removed from the
+ * broad phase (no collisions, slices, or fractures) and its render scale eases
+ * to zero over `shrinkSeconds`; the despawn fires when the age reaches
+ * `delaySeconds + shrinkSeconds`. With `shrinkSeconds: 0` the original instant
+ * despawn behaviour is preserved (Phase 12.1).
+ */
+export function cullSmallBodies(world: SimWorld, frameDelta: number): EntityId[] {
+  const culling = world.config.smallBodyCulling;
+  if (!culling) {
+    return [];
+  }
+  const removed: EntityId[] = [];
+  for (const [id, body] of world.bodies) {
+    const meta = world.metadata.get(id);
+    if (!meta || meta.cullable === false || meta.volume === undefined) {
+      continue;
+    }
+    if (culling.skipStatic && body.invMass === 0) {
+      continue;
+    }
+    const age = (meta.ageSeconds ?? 0) + frameDelta;
+    meta.ageSeconds = age;
+    if (meta.dissolving) {
+      if (age >= culling.delaySeconds + culling.shrinkSeconds) {
+        removed.push(id);
+      }
+      continue;
+    }
+    if (age >= culling.delaySeconds && meta.volume < culling.minVolume) {
+      meta.dissolving = true;
+      // Leave the broad phase so nothing can slice, hit, or re-collide with the
+      // shrinking piece; the render state still emits it until despawn.
+      spatialRemove(world.spatial, id);
+      if (age >= culling.delaySeconds + culling.shrinkSeconds) {
+        removed.push(id);
+      }
     }
   }
   for (const id of removed) {
@@ -244,8 +431,25 @@ export function getRenderState(world: SimWorld): RenderItem[] {
       position: Vec3.clone(body.position),
       orientation: Quat.clone(body.orientation),
       visible: renderable.visible,
+      scale: dissolveScale(world, id),
       ...(materialId !== undefined ? { materialId } : {}),
     });
   }
   return items;
+}
+
+/**
+ * The uniform render scale for an entity: `[1,1,1]` normally; a dissolving
+ * body eases it from `1` → `0` across `smallBodyCulling.shrinkSeconds`
+ * (Phase 12.1). Derived from the age timer so no second clock is needed.
+ */
+function dissolveScale(world: SimWorld, id: EntityId): Vec3T {
+  const culling = world.config.smallBodyCulling;
+  const meta = world.metadata.get(id);
+  if (!culling || !meta?.dissolving || culling.shrinkSeconds <= 0) {
+    return [1, 1, 1];
+  }
+  const progress = ((meta.ageSeconds ?? 0) - culling.delaySeconds) / culling.shrinkSeconds;
+  const s = Math.max(0, Math.min(1, 1 - progress));
+  return [s, s, s];
 }

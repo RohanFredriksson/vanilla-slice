@@ -1,7 +1,8 @@
 # Vanilla Slice — Specification (SPEC.md)
 
 Status: Living · Core engine, slicing, rendering, runtime, materials, the
-interaction framework, and fracture are implemented (ADRs 0001–0009).
+interaction framework, and fracture are implemented (ADRs 0001–0009);
+small-fragment culling is implemented (ADR 0011).
 
 ## 1. Overview
 
@@ -38,6 +39,16 @@ consume the engine; the engine is never a game itself.
 - FR-2: Spawn entities with geometry, mass, and initial velocity.
 - FR-3: Advance simulation by a delta time via `world.update(dt)`.
 - FR-4: Remove entities that leave configured bounds (cleanup).
+- FR-34: Optionally cull bodies whose volume is below a configurable threshold
+  (`smallBodyCulling.minVolume`) once they have existed for at least a
+  configurable delay (`smallBodyCulling.delaySeconds`); disabled by default
+  (absent config) and opt-out per entity (`SpawnOptions.cullable`), so repeated
+  slices cannot accumulate unbounded tiny fragments (Phase 12). Culled bodies
+  shrink out of existence instead of popping: they stop colliding and their
+  render scale eases `1 → 0` over `smallBodyCulling.shrinkSeconds` (default
+  `0.3`, `0` = instant despawn) before being despawned; the engine owns the
+  dissolve timing/scale (`RenderItem.scale`), adapters only apply it (Phase
+  12.1).
 
 ### 5.2 Physics
 - FR-5: Apply gravity and integrate motion with a fixed timestep.
