@@ -8,6 +8,10 @@ name: Release
 on:
   push:
     branches: [master]
+  # Manual retry for when versioning/tagging succeeded but `npm publish` failed
+  # (e.g. an expired NPM_TOKEN): re-publishes the already-versioned packages
+  # without computing a new version.
+  workflow_dispatch:
 
 # Never run two releases at once, and never cancel an in-progress publish.
 concurrency:
@@ -16,6 +20,7 @@ concurrency:
 
 permissions:
   contents: write # push the version commit + tag, create the GitHub Release
+  id-token: write # npm provenance attestation (OIDC)
 
 jobs:
   release:
@@ -23,7 +28,7 @@ jobs:
     # Belt-and-suspenders: skip the workflow's own release commit. That commit
     # also carries "[skip ci]", which GitHub already honors — this guards the
     # rare case where that is stripped.
-    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'chore(release):') }}
     steps:
       - name: Checkout (full history + tags)
         uses: actions/checkout@v4
@@ -49,9 +54,18 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Release (version, changelog, tag, publish)
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         run: npx nx release --yes
         env:
+          NPM_CONFIG_PROVENANCE: 'true'
           # Push the release commit/tag and create the GitHub Release.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Authenticate `npm publish` (set this repository secret).
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish only (manual retry)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: npx nx release publish
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
