@@ -114,7 +114,7 @@ Run the demos in a browser (Vite dev server; engine packages resolve to source):
   - [x] CI workflow trigger fixed (`main` → `master`).
   - [ ] Add the `NPM_TOKEN` repository secret and bootstrap the first release
         (`npx nx release 0.1.0 --first-release --yes`).
-  - [ ] npm publish provenance / supply-chain attestation.
+  - [x] npm publish provenance (`id-token: write` + `NPM_CONFIG_PROVENANCE`) and a `workflow_dispatch` publish-only retry.
 
 ## Phase 8 — Materials System (ADR 0009, proposed)
 
